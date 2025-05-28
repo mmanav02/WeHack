@@ -1,0 +1,11 @@
+package com.we.hack.service;
+
+import com.we.hack.model.Hackathon;
+import com.we.hack.model.User;
+
+import java.util.List;
+
+public interface HackathonService {
+    Hackathon createHackathon(String title, String description, String date, User organizer);
+    List<Hackathon> getAllHackathons();
+}
