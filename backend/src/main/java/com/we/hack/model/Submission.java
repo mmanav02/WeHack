@@ -17,6 +17,8 @@ public class Submission {
     private String description;
     private String projectUrl;
 
+    private String filePath;
+
     @ManyToOne
     private User user;
 
