@@ -22,4 +22,8 @@ public class HackathonRole {
 
     @Enumerated(EnumType.STRING)
     private Role role; // PARTICIPANT or JUDGE
+
+    @Enumerated(EnumType.STRING)
+    private ApprovalStatus status;
+
 }

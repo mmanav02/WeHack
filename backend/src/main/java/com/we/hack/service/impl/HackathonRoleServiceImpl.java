@@ -1,9 +1,6 @@
 package com.we.hack.service.impl;
 
-import com.we.hack.model.Hackathon;
-import com.we.hack.model.HackathonRole;
-import com.we.hack.model.Role;
-import com.we.hack.model.User;
+import com.we.hack.model.*;
 import com.we.hack.repository.HackathonRepository;
 import com.we.hack.repository.HackathonRoleRepository;
 import com.we.hack.repository.UserRepository;
@@ -35,6 +32,13 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
         hackathonRole.setUser(user);
         hackathonRole.setHackathon(hackathon);
         hackathonRole.setRole(role);
+
+        //  Logic: auto-approve participant, pending for judge
+        if (role == Role.PARTICIPANT) {
+            hackathonRole.setStatus(ApprovalStatus.APPROVED);
+        } else if (role == Role.JUDGE) {
+            hackathonRole.setStatus(ApprovalStatus.PENDING);
+        }
 
         return hackathonRoleRepository.save(hackathonRole);
     }
