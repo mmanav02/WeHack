@@ -6,16 +6,16 @@ import java.util.*;
 
 public class Logger {
     private static Logger instance;
-    private Queue<String> log;
-    private int SIZE;
+    private static Queue<String> log;
+    private static int SIZE;
 
     private Logger(int size) throws IOException {
+        log = new LinkedList<>();
         logLoad();
         SIZE = size;
-        log = new LinkedList<>();
     }
 
-    public static Logger getInstance(int size) throws IOException {
+    public synchronized static Logger getInstance(int size) throws IOException {
         if(instance == null) {
             instance = new Logger(size);
         }
@@ -23,27 +23,28 @@ public class Logger {
     }
 
     private void logLoad() throws IOException {
-        SimpleDateFormat ft
-                = new SimpleDateFormat("dd-MM-yyyy");
-        String fileName = "logs/log_"+ft.format(new Date());
-        try {
-            BufferedReader reader = new BufferedReader(new FileReader(fileName));
-            for(String line = reader.readLine(); line != null; line = reader.readLine()) {
-                log.add(line);
+        SimpleDateFormat ft = new SimpleDateFormat("dd-MM-yyyy");
+        System.out.println(Logger.class.getPackage().getName().replace('.', '/'));
+        String fileName = "src/main/java/"+ Logger.class.getPackage().getName().replace('.', '/') +"/logs/log_" + ft.format(new Date()) + ".log";
+        File f = new File(fileName);
+
+        if (!f.exists()) {
+            if (f.createNewFile()) {
+                System.out.println("New file created");
+            } else {
+                System.out.println("Error creating new file");
             }
-        } catch (FileNotFoundException e) {
-            System.out.println("File not found");
-            File f = new File(fileName);
-            if (f.createNewFile())
-                System.out.println("New File created");
+        } else {
+            try (BufferedReader reader = new BufferedReader(new FileReader(f))) {
+                for (String line; (line = reader.readLine()) != null;) {
+                    log.add(line);
+                }
+            }
         }
     }
 
     private boolean isFull() {
-        if(log.size() == SIZE){
-            return true;
-        }
-        return false;
+        return log.size() == SIZE;
     }
 
     private void shiftLog(){
@@ -55,7 +56,7 @@ public class Logger {
     private void writeLog(){
         SimpleDateFormat ft
                 = new SimpleDateFormat("dd-MM-yyyy");
-        String fileName = "logs/log_"+ft.format(new Date());
+        String fileName = "src/main/java/"+ Logger.class.getPackage().getName().replace('.', '/') +"/logs/log_" + ft.format(new Date()) + ".log";
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileName, false))) {
             while (!log.isEmpty()) {
                 writer.write(log.poll());
