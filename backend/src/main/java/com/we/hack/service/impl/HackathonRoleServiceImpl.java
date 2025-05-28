@@ -8,6 +8,8 @@ import com.we.hack.service.HackathonRoleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class HackathonRoleServiceImpl implements HackathonRoleService {
 
@@ -41,5 +43,12 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
         }
 
         return hackathonRoleRepository.save(hackathonRole);
+    }
+
+    @Override
+    public List<HackathonRole> getPendingJudgeRequests(int hackathonId) {
+        return hackathonRoleRepository.findByHackathonIdAndRoleAndStatus(
+                hackathonId, Role.JUDGE, ApprovalStatus.PENDING
+        );
     }
 }

@@ -6,6 +6,8 @@ import com.we.hack.service.HackathonRoleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/hackathon-role")
 public class HackathonRoleController {
@@ -22,4 +24,10 @@ public class HackathonRoleController {
                 request.getRole()
         );
     }
+
+    @GetMapping("/hackathons/{hackathonId}/judge-requests")
+    public List<HackathonRole> getPendingJudgeRequests(@PathVariable int hackathonId) {
+        return hackathonRoleService.getPendingJudgeRequests(hackathonId);
+    }
+
 }
