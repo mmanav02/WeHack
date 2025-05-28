@@ -51,4 +51,21 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
                 hackathonId, Role.JUDGE, ApprovalStatus.PENDING
         );
     }
+
+    @Override
+    public HackathonRole updateJudgeStatus(Long hackathonId, Long userId, ApprovalStatus status) {
+        HackathonRole roleEntry = hackathonRoleRepository.findAll().stream()
+                .filter(r -> r.getHackathon().getId().equals(hackathonId) &&
+                        r.getUser().getId() == userId &&
+                        r.getRole() == Role.JUDGE)
+                .findFirst()
+                .orElseThrow(() -> new RuntimeException("Judge request not found"));
+
+        roleEntry.setStatus(status);
+        return hackathonRoleRepository.save(roleEntry);
+    }
+
+
+
+
 }

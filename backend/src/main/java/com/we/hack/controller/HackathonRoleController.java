@@ -1,6 +1,7 @@
 package com.we.hack.controller;
 
 import com.we.hack.dto.JoinHackathonRequest;
+import com.we.hack.dto.JudgeApprovalRequest;
 import com.we.hack.model.HackathonRole;
 import com.we.hack.service.HackathonRoleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,5 +30,15 @@ public class HackathonRoleController {
     public List<HackathonRole> getPendingJudgeRequests(@PathVariable int hackathonId) {
         return hackathonRoleService.getPendingJudgeRequests(hackathonId);
     }
+
+    @PostMapping("/update-status")
+    public HackathonRole updateJudgeStatus(@RequestBody JudgeApprovalRequest request) {
+        return hackathonRoleService.updateJudgeStatus(
+                request.getHackathonId(),
+                request.getUserId(),
+                request.getStatus()
+        );
+    }
+
 
 }
