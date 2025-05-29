@@ -25,6 +25,16 @@ public class SubmissionController {
             @RequestParam("projectUrl") String projectUrl,
             @RequestParam(value = "file", required = false) MultipartFile file
     ) {
+
+
+        Submission submission = new Submission();
+        submission.setTitle(title);
+        submission.setDescription(description);
+        submission.setProjectUrl(projectUrl);
+//        submission.setFilePath("uploads/" + new File(filePath).getName());
+
+        submissionService.validateSubmission(userId, hackathonId, submission, file);
+
         String filePath = null;
 
         if (file != null && !file.isEmpty()) {
@@ -35,18 +45,14 @@ public class SubmissionController {
 
                 filePath = uploadDir + System.currentTimeMillis() + "_" + file.getOriginalFilename();
                 file.transferTo(new File(filePath));
+
+                // Set relative path to store in DB
+                submission.setFilePath("uploads/" + new File(filePath).getName());
             } catch (Exception e) {
                 throw new RuntimeException("File upload failed", e);
             }
         }
 
-        Submission submission = new Submission();
-        submission.setTitle(title);
-        submission.setDescription(description);
-        submission.setProjectUrl(projectUrl);
-        submission.setFilePath("uploads/" + new File(filePath).getName());
-
-
-        return submissionService.submitProject(userId, hackathonId, submission);
+        return submissionService.saveSubmission(userId, hackathonId, submission);
     }
 }
