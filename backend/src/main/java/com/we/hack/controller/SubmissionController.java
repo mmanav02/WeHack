@@ -55,4 +55,19 @@ public class SubmissionController {
 
         return submissionService.saveSubmission(userId, hackathonId, submission);
     }
+
+    @PutMapping("/{hackathonId}/user/{userId}/submission/{submissionId}")
+    public Submission editSubmission(
+            @PathVariable int hackathonId,
+            @PathVariable Long userId,
+            @PathVariable Long submissionId,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("projectUrl") String projectUrl,
+            @RequestParam(value = "file", required = false) MultipartFile file
+    ) {
+        return submissionService.editSubmission(hackathonId, userId, submissionId, title, description, projectUrl, file);
+    }
+
+
 }

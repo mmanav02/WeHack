@@ -60,4 +60,25 @@ public class SubmissionServiceProxy implements SubmissionService {
         return realSubmissionService.saveSubmission(userId, hackathonId, submission);
     }
 
+    @Override
+    public Submission editSubmission(int hackathonId, Long userId, Long submissionId, String title, String description, String projectUrl, MultipartFile file) {
+        //  Apply validators again to validate title/description/file during edit
+        Submission submission = new Submission();
+        submission.setTitle(title);
+        submission.setDescription(description);
+        submission.setProjectUrl(projectUrl);
+
+        SubmissionValidator titleValidator = new TitleValidator();
+        SubmissionValidator descValidator = new DescriptionValidator();
+        SubmissionValidator fileValidator = new FileSizeValidator();
+
+        titleValidator.setNext(descValidator);
+        descValidator.setNext(fileValidator);
+
+        titleValidator.validate(submission, file);
+
+        return realSubmissionService.editSubmission(hackathonId, userId, submissionId, title, description, projectUrl, file);
+    }
+
+
 }

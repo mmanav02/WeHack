@@ -20,8 +20,10 @@ public class Submission {
     private String filePath;
 
     @ManyToOne
+    @JoinColumn(name = "user_id")
     private User user;
 
     @ManyToOne
+    @JoinColumn(name = "hackathon_id")
     private Hackathon hackathon;
 }
