@@ -53,8 +53,6 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
     public void leaveHackathon(long userId, long hackathonId) {
 
         // 1. Make sure the link row actually exists
-        System.out.println(userId);
-        System.out.println(hackathonId);
         HackathonRole link = hackathonRoleRepository
                 .findByUserIdAndHackathonId(userId, hackathonId)
                 .orElseThrow(() -> new RuntimeException("User is not enrolled in this hackathon"));

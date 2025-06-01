@@ -28,7 +28,7 @@ public class HackathonRoleController {
         );
     }
 
-    @PostMapping("/leave")
+    @DeleteMapping("/leave")
     public ResponseEntity<String> leave(@RequestBody LeaveHackathonRequest request) {
         hackathonRoleService.leaveHackathon(request.getUserId(), request.getHackathonId());
         return ResponseEntity.ok("Left hackathon successfully");

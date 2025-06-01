@@ -1,5 +1,6 @@
 package com.we.hack.controller;
 
+import com.we.hack.dto.DeleteHackathonRequest;
 import com.we.hack.dto.HackathonRequest;
 import com.we.hack.model.Hackathon;
 import com.we.hack.model.User;
@@ -36,6 +37,11 @@ public class HackathonController {
                 request.getDate(),
                 organizer
         );
+    }
+
+    @DeleteMapping("/delete")
+    public void deleteHackathon(@RequestBody DeleteHackathonRequest request) {
+        hackathonService.deleteHackathon(request.getHackathonId());
     }
 
 

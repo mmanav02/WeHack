@@ -25,6 +25,10 @@ public class HackathonServiceImpl implements HackathonService {
         return hackathonRepository.save(hackathon);
     }
 
+    public void deleteHackathon(long hackathonId) {
+        hackathonRepository.deleteById((int) hackathonId);
+    }
+
     @Override
     public List<Hackathon> getAllHackathons() {
         return hackathonRepository.findAll();
