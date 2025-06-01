@@ -20,4 +20,7 @@ public class Hackathon {
     @ManyToOne
     @JoinColumn(name = "organizer_id")
     private User organizer;
+
+    @Enumerated(EnumType.STRING)
+    private ScoringMethod scoringMethod;
 }
