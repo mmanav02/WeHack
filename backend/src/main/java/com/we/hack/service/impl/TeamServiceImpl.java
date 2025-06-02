@@ -1,4 +1,4 @@
-package com.we.hack.service.builder;
+package com.we.hack.service.impl;
 
 import com.we.hack.model.Hackathon;
 import com.we.hack.model.Team;
