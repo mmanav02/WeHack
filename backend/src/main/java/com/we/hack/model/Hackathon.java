@@ -16,6 +16,7 @@ public class Hackathon {
     private String title;
     private String description;
     private String date; // You can later change it to LocalDateTime if needed
+    private String status; // Example values: "Draft", "Published", etc.
 
     @ManyToOne
     @JoinColumn(name = "organizer_id")
