@@ -8,6 +8,7 @@ import com.we.hack.service.HackathonService;
 import com.we.hack.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -51,4 +52,27 @@ public class HackathonController {
     public List<Hackathon> getAllHackathons() {
         return hackathonService.getAllHackathons();
     }
+
+
+    // Publish a hackathon
+    @PutMapping("/{hackathonId}/publish")
+    public ResponseEntity<String> publishHackathon(@PathVariable int hackathonId) {
+        hackathonService.publishHackathon(hackathonId);
+        return ResponseEntity.ok("Hackathon published.");
+    }
+
+    // Begin judging phase
+    @PutMapping("/{hackathonId}/judging")
+    public ResponseEntity<String> startJudging(@PathVariable int hackathonId) {
+        hackathonService.startJudging(hackathonId);
+        return ResponseEntity.ok("Hackathon moved to judging phase.");
+    }
+
+    // Complete the hackathon
+    @PutMapping("/{hackathonId}/complete")
+    public ResponseEntity<String> completeHackathon(@PathVariable int hackathonId) {
+        hackathonService.completeHackathon(hackathonId);
+        return ResponseEntity.ok("Hackathon marked as completed.");
+    }
+
 }
