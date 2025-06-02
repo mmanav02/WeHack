@@ -2,9 +2,11 @@ package com.we.hack.controller;
 
 import com.we.hack.dto.JoinHackathonRequest;
 import com.we.hack.dto.JudgeApprovalRequest;
+import com.we.hack.dto.LeaveHackathonRequest;
 import com.we.hack.model.HackathonRole;
 import com.we.hack.service.HackathonRoleService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -24,6 +26,12 @@ public class HackathonRoleController {
                 request.getHackathonId(),
                 request.getRole()
         );
+    }
+
+    @DeleteMapping("/leave")
+    public ResponseEntity<String> leave(@RequestBody LeaveHackathonRequest request) {
+        hackathonRoleService.leaveHackathon(request.getUserId(), request.getHackathonId());
+        return ResponseEntity.ok("Left hackathon successfully");
     }
 
     @GetMapping("/hackathons/{hackathonId}/judge-requests")

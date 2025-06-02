@@ -3,6 +3,7 @@ package com.we.hack.service.impl;
 import com.we.hack.model.*;
 import com.we.hack.repository.HackathonRepository;
 import com.we.hack.repository.HackathonRoleRepository;
+import com.we.hack.repository.SubmissionRepository;
 import com.we.hack.repository.UserRepository;
 import com.we.hack.service.HackathonRoleService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,9 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SubmissionRepository submissionRepository;
 
     @Autowired
     private HackathonRepository hackathonRepository;
@@ -43,6 +47,21 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
         }
 
         return hackathonRoleRepository.save(hackathonRole);
+    }
+
+    @Override
+    public void leaveHackathon(long userId, long hackathonId) {
+
+        // 1. Make sure the link row actually exists
+        HackathonRole link = hackathonRoleRepository
+                .findByUserIdAndHackathonId(userId, hackathonId)
+                .orElseThrow(() -> new RuntimeException("User is not enrolled in this hackathon"));
+
+        // 2. Delete every submission this user made in that event
+        submissionRepository.deleteByUserAndHackathon(userId, hackathonId);
+
+        // 3. Delete the membership row itself
+        hackathonRoleRepository.delete(link);
     }
 
     @Override
