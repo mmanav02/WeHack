@@ -17,8 +17,8 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public User registerUser(User user) throws IOException {
-        Logger logger = Logger.getInstance(50);
-        logger.INFO("Registering new user");
+//        Logger logger = Logger.getInstance(50);
+//        logger.INFO("Registering new user");
         return userRepository.save(user); // hash password here
     }
 

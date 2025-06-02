@@ -1,6 +1,7 @@
 package com.we.hack.service.impl;
 
 import com.we.hack.model.Hackathon;
+import com.we.hack.model.ScoringMethod;
 import com.we.hack.model.User;
 import com.we.hack.repository.HackathonRepository;
 import com.we.hack.service.HackathonService;
@@ -16,12 +17,13 @@ public class HackathonServiceImpl implements HackathonService {
     private HackathonRepository hackathonRepository;
 
     @Override
-    public Hackathon createHackathon(String title, String description, String date, User organizer) {
+    public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod) {
         Hackathon hackathon = new Hackathon();
         hackathon.setTitle(title);
         hackathon.setDescription(description);
         hackathon.setDate(date);
         hackathon.setOrganizer(organizer);
+        hackathon.setScoringMethod(scoringMethod);
         return hackathonRepository.save(hackathon);
     }
 

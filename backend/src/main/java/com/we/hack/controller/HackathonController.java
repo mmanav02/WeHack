@@ -34,7 +34,8 @@ public class HackathonController {
                 request.getTitle(),
                 request.getDescription(),
                 request.getDate(),
-                organizer
+                organizer,
+                request.getScoringMethod()
         );
     }
 
