@@ -10,7 +10,7 @@ import lombok.*;
 @Setter
 @NoArgsConstructor
 @Entity
-public class Comment {
+public class Comment implements CommentComponent{
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -28,12 +28,22 @@ public class Comment {
     @JsonIgnore
     private Comment parent;
 
+
     @OneToMany(mappedBy = "parent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Comment> replies = new ArrayList<>();
 
-    public void addReply(Comment reply){
-        reply.setParent(this);
-        replies.add(reply);
+    // Composite behavior
+    @Override
+    public List<CommentComponent> getReplies() {
+        return new ArrayList<>(replies);
+    }
+
+    @Override
+    public void addReply(CommentComponent reply){
+        if (reply instanceof Comment comment) {
+            comment.setParent(this);
+            replies.add(comment);
+        }
     }
 
 
