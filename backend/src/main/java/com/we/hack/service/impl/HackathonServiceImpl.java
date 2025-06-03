@@ -1,10 +1,11 @@
 package com.we.hack.service.impl;
 
-import com.we.hack.model.Hackathon;
-import com.we.hack.model.ScoringMethod;
-import com.we.hack.model.User;
+import com.we.hack.model.*;
 import com.we.hack.repository.HackathonRepository;
+import com.we.hack.repository.HackathonRoleRepository;
 import com.we.hack.service.HackathonService;
+import com.we.hack.service.observer.HackathonNotificationManager;
+import com.we.hack.service.observer.JudgeNotifier;
 import com.we.hack.service.state.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,9 @@ public class HackathonServiceImpl implements HackathonService {
 
     @Autowired
     private HackathonRepository hackathonRepository;
+
+    @Autowired
+    private HackathonRoleRepository hackathonRoleRepository;
 
     @Override
     public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod) {
@@ -46,6 +50,10 @@ public class HackathonServiceImpl implements HackathonService {
         HackathonContext context = new HackathonContext(getStateFromStatus(hackathon.getStatus()));
         context.publish(hackathon);
         hackathonRepository.save(hackathon);
+
+        //  Notify all already registered judges
+        HackathonNotificationManager notifier = new HackathonNotificationManager();
+        notifier.notifyObservers(hackathonId, "Hackathon \"" + hackathon.getTitle() + "\" is now Published!");
     }
 
 

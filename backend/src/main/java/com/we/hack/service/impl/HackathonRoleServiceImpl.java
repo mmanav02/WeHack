@@ -6,6 +6,8 @@ import com.we.hack.repository.HackathonRoleRepository;
 import com.we.hack.repository.SubmissionRepository;
 import com.we.hack.repository.UserRepository;
 import com.we.hack.service.HackathonRoleService;
+import com.we.hack.service.observer.HackathonObserverRegistry;
+import com.we.hack.service.observer.JudgeNotifier;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -81,6 +83,12 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
                 .orElseThrow(() -> new RuntimeException("Judge request not found"));
 
         roleEntry.setStatus(status);
+        if(status.equals("APPROVED")){
+            HackathonObserverRegistry.registerObserver(
+                    Math.toIntExact(hackathonId),
+                    new JudgeNotifier("tempJudgeEmail")
+            );
+        }
         return hackathonRoleRepository.save(roleEntry);
     }
 
