@@ -24,6 +24,10 @@ public class Submission {
     private User user;
 
     @ManyToOne
+    @JoinColumn(name = "team_id")
+    private Team team;
+
+    @ManyToOne
     @JoinColumn(name = "hackathon_id")
     private Hackathon hackathon;
 }
