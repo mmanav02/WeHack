@@ -1,5 +1,6 @@
 package com.we.hack.service.impl;
 
+import com.we.hack.dto.MailModes;
 import com.we.hack.model.*;
 import com.we.hack.repository.HackathonRepository;
 import com.we.hack.repository.HackathonRoleRepository;
@@ -26,10 +27,13 @@ public class HackathonServiceImpl implements HackathonService {
     private HackathonRoleRepository hackathonRoleRepository;
 
     @Override
-    public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword) {
-        User organizerFetch = userRepository.getReferenceById((long) organizer.getId());
-        organizerFetch.setSmtpPassword(smtpPassword);
-        userRepository.save(organizerFetch);
+    public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode) {
+        if(mailMode == MailModes.ORGANIZED) {
+            User organizerFetch = userRepository.getReferenceById((long) organizer.getId());
+            organizerFetch.setSmtpPassword(smtpPassword);
+            userRepository.save(organizerFetch);
+        }
+
         Hackathon hackathon = new Hackathon();
         hackathon.setTitle(title);
         hackathon.setDescription(description);
@@ -37,6 +41,7 @@ public class HackathonServiceImpl implements HackathonService {
         hackathon.setOrganizer(organizer);
         hackathon.setScoringMethod(scoringMethod);
         hackathon.setStatus("Draft");
+        hackathon.setMailMode(mailMode);
         return hackathonRepository.save(hackathon);
     }
 

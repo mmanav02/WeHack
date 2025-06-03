@@ -1,11 +1,13 @@
 package com.we.hack.service.impl;
 
+import com.we.hack.dto.MailModes;
 import com.we.hack.model.*;
 import com.we.hack.repository.HackathonRepository;
 import com.we.hack.repository.HackathonRoleRepository;
 import com.we.hack.repository.SubmissionRepository;
 import com.we.hack.repository.UserRepository;
 import com.we.hack.service.HackathonRoleService;
+import com.we.hack.service.adapter.MailgunAdapter;
 import com.we.hack.service.adapter.OrganizerMailAdapter;
 import com.we.hack.service.observer.HackathonObserverRegistry;
 import com.we.hack.service.observer.JudgeNotifier;
@@ -31,6 +33,8 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
 
     @Autowired
     private OrganizerMailAdapter organizerMailAdapter;
+
+    @Autowired MailgunAdapter mailgunAdapter;
 
     @Override
     public HackathonRole joinHackathon(Long userId, int hackathonId, Role role) {
@@ -96,13 +100,28 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
         String judgeEmail = Judge.getEmail();
 
         roleEntry.setStatus(status);
-        if(status.equals(ApprovalStatus.APPROVED)){
-            HackathonObserverRegistry.registerObserver(
-                    Math.toIntExact(hackathonId),
-                    new JudgeNotifier(judgeEmail, Organizer, organizerMailAdapter)
-            );
 
-            System.out.println("Judge request approved");
+        if(hackathon.getMailMode() == MailModes.ORGANIZED) {
+            if (status.equals(ApprovalStatus.APPROVED)) {
+                JudgeNotifier judgeNotifier = new JudgeNotifier(judgeEmail, Organizer, organizerMailAdapter);
+                judgeNotifier.update("Hackathon \"" + hackathon.getTitle() + "\" is now Published!");
+                HackathonObserverRegistry.registerObserver(
+                        Math.toIntExact(hackathonId),judgeNotifier
+                );
+
+                System.out.println("Judge request approved");
+            }
+        }else if(hackathon.getMailMode() == MailModes.MAILGUN){
+            if (status.equals(ApprovalStatus.APPROVED)) {
+                JudgeNotifier judgeNotifier = new JudgeNotifier(judgeEmail, Organizer, mailgunAdapter);
+                judgeNotifier.update("Hackathon \"" + hackathon.getTitle() + "\" is now Published!");
+                HackathonObserverRegistry.registerObserver(
+                        Math.toIntExact(hackathonId),
+                        new JudgeNotifier(judgeEmail, Organizer, mailgunAdapter)
+                );
+
+                System.out.println("Judge request approved");
+            }
         }
         return hackathonRoleRepository.save(roleEntry);
     }

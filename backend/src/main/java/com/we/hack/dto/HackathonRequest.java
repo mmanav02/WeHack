@@ -11,4 +11,5 @@ public class HackathonRequest {
     private long userId;
     private ScoringMethod scoringMethod;
     private String smtpPassword;
+    private MailModes mailMode;
 }

@@ -38,7 +38,8 @@ public class HackathonController {
                 request.getDate(),
                 organizer,
                 request.getScoringMethod(),
-                request.getSmtpPassword()
+                request.getSmtpPassword(),
+                request.getMailMode()
         );
     }
 

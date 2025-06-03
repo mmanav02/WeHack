@@ -1,5 +1,6 @@
 package com.we.hack.model;
 
+import com.we.hack.dto.MailModes;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,4 +25,7 @@ public class Hackathon {
 
     @Enumerated(EnumType.STRING)
     private ScoringMethod scoringMethod;
+
+    @Enumerated(EnumType.STRING)
+    private MailModes mailMode;
 }
