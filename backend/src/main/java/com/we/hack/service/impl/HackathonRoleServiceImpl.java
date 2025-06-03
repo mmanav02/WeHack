@@ -83,11 +83,13 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
                 .orElseThrow(() -> new RuntimeException("Judge request not found"));
 
         roleEntry.setStatus(status);
-        if(status.equals("APPROVED")){
+        if(status.equals(ApprovalStatus.APPROVED)){
             HackathonObserverRegistry.registerObserver(
                     Math.toIntExact(hackathonId),
                     new JudgeNotifier("tempJudgeEmail")
             );
+
+            System.out.println("Judge request approved");
         }
         return hackathonRoleRepository.save(roleEntry);
     }

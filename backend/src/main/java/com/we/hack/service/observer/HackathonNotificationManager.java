@@ -18,6 +18,8 @@ public class HackathonNotificationManager implements HackathonSubject{
 
     @Override
     public void notifyObservers(int hackathonId, String message){
+        List<HackathonObserver> observers = HackathonObserverRegistry.getObservers(hackathonId);
+        System.out.println("Notifying observers: " + observers.size() + "for hackathon");
         for (HackathonObserver observer : HackathonObserverRegistry.getObservers(hackathonId)) {
             observer.update(message);
         }
