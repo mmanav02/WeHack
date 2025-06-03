@@ -10,4 +10,5 @@ public class HackathonRequest {
     private String date;
     private long userId;
     private ScoringMethod scoringMethod;
+    private String smtpPassword;
 }

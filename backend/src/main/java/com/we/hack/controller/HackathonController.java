@@ -31,13 +31,14 @@ public class HackathonController {
     public Hackathon createHackathon(@RequestBody HackathonRequest request) {
         User organizer = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + request.getUserId()));
-
+        System.out.println(request.getSmtpPassword());
         return hackathonService.createHackathon(
                 request.getTitle(),
                 request.getDescription(),
                 request.getDate(),
                 organizer,
-                request.getScoringMethod()
+                request.getScoringMethod(),
+                request.getSmtpPassword()
         );
     }
 

@@ -6,6 +6,7 @@ import com.we.hack.repository.HackathonRoleRepository;
 import com.we.hack.repository.SubmissionRepository;
 import com.we.hack.repository.UserRepository;
 import com.we.hack.service.HackathonRoleService;
+import com.we.hack.service.adapter.OrganizerMailAdapter;
 import com.we.hack.service.observer.HackathonObserverRegistry;
 import com.we.hack.service.observer.JudgeNotifier;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,6 +28,9 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
 
     @Autowired
     private HackathonRepository hackathonRepository;
+
+    @Autowired
+    private OrganizerMailAdapter organizerMailAdapter;
 
     @Override
     public HackathonRole joinHackathon(Long userId, int hackathonId, Role role) {
@@ -82,11 +86,20 @@ public class HackathonRoleServiceImpl implements HackathonRoleService {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Judge request not found"));
 
+        Hackathon hackathon = hackathonRepository.findById(Math.toIntExact(hackathonId))
+                .orElseThrow(() -> new RuntimeException("Hackathon not found"));
+
+        User Organizer = hackathon.getOrganizer();
+
+        User Judge = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        String judgeEmail = Judge.getEmail();
+
         roleEntry.setStatus(status);
         if(status.equals(ApprovalStatus.APPROVED)){
             HackathonObserverRegistry.registerObserver(
                     Math.toIntExact(hackathonId),
-                    new JudgeNotifier("tempJudgeEmail")
+                    new JudgeNotifier(judgeEmail, Organizer, organizerMailAdapter)
             );
 
             System.out.println("Judge request approved");

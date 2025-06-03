@@ -7,7 +7,7 @@ import com.we.hack.model.User;
 import java.util.List;
 
 public interface HackathonService {
-    Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod);
+    Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword);
     List<Hackathon> getAllHackathons();
     void deleteHackathon(long hackathonId);
     void publishHackathon(int hackathonId);

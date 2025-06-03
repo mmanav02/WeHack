@@ -27,3 +27,4 @@ replay_pid*
 backend/.idea/
 backend/target/
 backend/uploads/
+.env

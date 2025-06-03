@@ -20,6 +20,8 @@ public class User {
 
     private String password;
 
+    private String smtpPassword;
+
 //    @Enumerated(EnumType.STRING)
 //    private Role role;
 }

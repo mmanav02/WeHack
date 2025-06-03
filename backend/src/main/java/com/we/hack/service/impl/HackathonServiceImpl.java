@@ -3,6 +3,7 @@ package com.we.hack.service.impl;
 import com.we.hack.model.*;
 import com.we.hack.repository.HackathonRepository;
 import com.we.hack.repository.HackathonRoleRepository;
+import com.we.hack.repository.UserRepository;
 import com.we.hack.service.HackathonService;
 import com.we.hack.service.observer.HackathonNotificationManager;
 import com.we.hack.service.observer.JudgeNotifier;
@@ -19,10 +20,16 @@ public class HackathonServiceImpl implements HackathonService {
     private HackathonRepository hackathonRepository;
 
     @Autowired
+    UserRepository userRepository;
+
+    @Autowired
     private HackathonRoleRepository hackathonRoleRepository;
 
     @Override
-    public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod) {
+    public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword) {
+        User organizerFetch = userRepository.getReferenceById((long) organizer.getId());
+        organizerFetch.setSmtpPassword(smtpPassword);
+        userRepository.save(organizerFetch);
         Hackathon hackathon = new Hackathon();
         hackathon.setTitle(title);
         hackathon.setDescription(description);
