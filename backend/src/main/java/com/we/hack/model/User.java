@@ -1,5 +1,6 @@
 package com.we.hack.model;
 
+import com.we.hack.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -24,4 +25,8 @@ public class User {
 
 //    @Enumerated(EnumType.STRING)
 //    private Role role;
+
+    public void accept(AnalyticsVisitor visitor){
+        visitor.visit(this);
+    }
 }

@@ -1,5 +1,6 @@
 package com.we.hack.model;
 
+import com.we.hack.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -22,4 +23,8 @@ public class JudgeScore {
     private int innovation;
     private int impact;
     private int execution;
+
+    public void accept(AnalyticsVisitor visitor){
+        visitor.visit(this);
+    }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
+import com.we.hack.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -43,4 +44,8 @@ public class Team {
     @JoinColumn(name = "submission_id")
     @JsonManagedReference
     private Submission submission;
+
+    public void accept(AnalyticsVisitor visitor){
+        visitor.visit(this);
+    }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.we.hack.service.memento.SubmissionMemento;
+import com.we.hack.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -56,5 +57,9 @@ public class Submission {
         this.description = m.getDescription();
         this.projectUrl  = m.getProjectUrl();
         this.filePath    = m.getFilePath();
+    }
+
+    public void accept(AnalyticsVisitor visitor){
+        visitor.visit(this);
     }
 }

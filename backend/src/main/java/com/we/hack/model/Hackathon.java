@@ -1,6 +1,7 @@
 package com.we.hack.model;
 
 import com.we.hack.dto.MailModes;
+import com.we.hack.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -28,4 +29,8 @@ public class Hackathon {
 
     @Enumerated(EnumType.STRING)
     private MailModes mailMode;
+
+    public void accept(AnalyticsVisitor visitor){
+        visitor.visit(this);
+    }
 }
