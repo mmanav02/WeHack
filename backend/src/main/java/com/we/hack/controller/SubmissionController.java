@@ -1,5 +1,8 @@
 package com.we.hack.controller;
 
+import com.we.hack.dto.EditSubmissionRequest;
+import com.we.hack.dto.SubmitProjectRequest;
+import com.we.hack.dto.UndoSubmitProjectRequest;
 import com.we.hack.model.Submission;
 import com.we.hack.service.SubmissionService;
 import com.we.hack.service.builder.Submission.ConcreteSubmissionBuilder;
@@ -19,15 +22,17 @@ public class SubmissionController {
     private SubmissionServiceImpl submissionService;
 
     // POST /submissions/{hackathonId}/user/{userId}
-    @PostMapping("/{hackathonId}/user/{userId}")
+//    @PostMapping("/{hackathonId}/user/{userId}")
+    @PostMapping("/submitProject")
     public Submission submitProject(
-            @PathVariable int hackathonId,
-            @PathVariable Long userId,
-            @RequestParam("title") String title,
-            @RequestParam("description") String description,
-            @RequestParam("projectUrl") String projectUrl,
-            @RequestParam(value = "file", required = false) MultipartFile file
-    ) {
+//            @PathVariable int hackathonId,
+//            @PathVariable Long userId,
+//            @RequestParam("title") String title,
+//            @RequestParam("description") String description,
+//            @RequestParam("projectUrl") String projectUrl,
+//            @RequestParam(value = "file", required = false) MultipartFile file
+            @RequestBody SubmitProjectRequest request
+            ) {
 
 //        Submission submission = new Submission();
 //        submission.setTitle(title);
@@ -56,24 +61,35 @@ public class SubmissionController {
 //        }
 
         SubmissionBuilder builder = new ConcreteSubmissionBuilder()
-                .title(title)
-                .description(description)
-                .projectUrl(projectUrl);
-        return submissionService.createFinalSubmission(builder, userId, hackathonId, file);
+                .title(request.getTitle())
+                .description(request.getDescription())
+                .projectUrl(request.getProjectUrl());
+        return submissionService.createFinalSubmission(builder, request.getUserId(), request.getHackathonId(), request.getFile());
     }
 
-    @PutMapping("/{hackathonId}/user/{userId}/submission/{submissionId}")
+    @PutMapping("/editSubmission")
     public Submission editSubmission(
-            @PathVariable int hackathonId,
-            @PathVariable Long userId,
-            @PathVariable Long submissionId,
-            @RequestParam("title") String title,
-            @RequestParam("description") String description,
-            @RequestParam("projectUrl") String projectUrl,
-            @RequestParam(value = "file", required = false) MultipartFile file
-    ) {
-        return submissionService.editSubmission(hackathonId, userId, submissionId, title, description, projectUrl, file);
+//            @PathVariable int hackathonId,
+//            @PathVariable Long userId,
+//            @PathVariable Long submissionId,
+//            @RequestParam("title") String title,
+//            @RequestParam("description") String description,
+//            @RequestParam("projectUrl") String projectUrl,
+//            @RequestParam(value = "file", required = false) MultipartFile file
+            @RequestBody EditSubmissionRequest request
+            ) {
+        return submissionService.editSubmission(request.getHackathonId(), request.getUserId(), request.getSubmissionId(), request.getTitle(), request.getDescription(), request.getProjectUrl(), request.getFile());
     }
 
+//    @PostMapping("/{hackathonId}/team/{teamId}/submission/{submissionId}/undo")
+    @PostMapping("/undoSubmission")
+    public Submission undoSubmission(
+//            @PathVariable Long teamId,
+//            @PathVariable Long submissionId,
+//            @PathVariable Long hackathonId
+            @RequestBody UndoSubmitProjectRequest request
+            ) {
+        return submissionService.undoLastEdit(request.getTeamId(), request.getSubmissionId(), request.getHackathonId());
+    }
 
 }

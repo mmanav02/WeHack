@@ -7,4 +7,6 @@ import java.util.Optional;
 
 public interface TeamRepository extends JpaRepository<Team, Long> {
     Optional<Team> findFirstByUsers_Id(Long userId);
+
+    boolean existsByIdAndUsers_Id(Long teamId, Long userId);
 }

@@ -1,9 +1,14 @@
 package com.we.hack.model;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonIdentityInfo;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.mapping.Join;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +17,9 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Data
+@JsonIdentityInfo(
+        generator = ObjectIdGenerators.PropertyGenerator.class,
+        property = "id")
 @Table(name="teams")
 public class Team {
 
@@ -30,4 +38,9 @@ public class Team {
     @ManyToOne
     @JoinColumn(name = "hackathon_id")
     private Hackathon hackathon;
+
+    @ManyToOne
+    @JoinColumn(name = "submission_id")
+    @JsonManagedReference
+    private Submission submission;
 }

@@ -1,8 +1,11 @@
 package com.we.hack.service.builder.Submission;
 
+import com.we.hack.model.Hackathon;
 import com.we.hack.model.Submission;
 import com.we.hack.model.Team;
+import com.we.hack.model.User;
 
+import java.time.Instant;
 import java.util.Objects;
 
 public class ConcreteSubmissionBuilder implements SubmissionBuilder {
@@ -27,8 +30,26 @@ public class ConcreteSubmissionBuilder implements SubmissionBuilder {
     }
 
     @Override
+    public SubmissionBuilder setUser(User user){
+        submission.setUser(user);
+        return this;
+    }
+
+    @Override
+    public SubmissionBuilder setHackathon(Hackathon hackathon){
+        submission.setHackathon(hackathon);
+        return this;
+    }
+
+    @Override
     public SubmissionBuilder projectUrl(String url){
         submission.setProjectUrl(url);
+        return this;
+    }
+
+    @Override
+    public SubmissionBuilder setSubmitTime(){
+        submission.setSubmitTime(Instant.now());
         return this;
     }
 

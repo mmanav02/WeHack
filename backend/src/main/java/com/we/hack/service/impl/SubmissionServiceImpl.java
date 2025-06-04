@@ -10,6 +10,8 @@ import com.we.hack.repository.TeamRepository;
 import com.we.hack.repository.UserRepository;
 import com.we.hack.service.SubmissionService;
 import com.we.hack.service.builder.Submission.SubmissionBuilder;
+import com.we.hack.service.memento.SubmissionHistoryManager;
+import com.we.hack.service.memento.SubmissionMemento;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Instant;
+import java.util.Optional;
 
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
@@ -32,6 +36,9 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Autowired
     private HackathonRepository hackathonRepository;
+
+    @Autowired
+    private SubmissionHistoryManager submissionHistoryManager;
 
     // This is only for builder pattern so not in the SubmissionService Interface and so now Overridden
     @Transactional
@@ -51,10 +58,10 @@ public class SubmissionServiceImpl implements SubmissionService {
 
         Submission submission = builder
                 .team(team)
+                .setSubmitTime()
+                .setUser(user)
+                .setHackathon(hackathon)
                 .build();
-
-        submission.setUser(user);
-        submission.setHackathon(hackathon);
 
         if (file != null && !file.isEmpty()) {
             try {
@@ -71,8 +78,12 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
 
         validateSubmission(userId, hackathonId, submission, file);
+        submission = submissionRepository.save(submission);
+        team.setSubmission(submission);
+        teamRepository.save(team);
 
-        return submissionRepository.save(submission);
+        submissionHistoryManager.push(team.getId(), submission.createMemento());
+        return submission;
     }
 
 
@@ -93,6 +104,9 @@ public class SubmissionServiceImpl implements SubmissionService {
         submission.setHackathon(hackathon);
         submission.setTeam(team);
 
+        team.setSubmission(submission);
+        teamRepository.save(team);
+
         return submissionRepository.save(submission);
     }
 
@@ -105,17 +119,30 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Override
     public Submission editSubmission(int hackathonId, Long userId, Long submissionId, String title, String description, String projectUrl, MultipartFile file) {
-        Submission submission = submissionRepository.findById(submissionId)
+        Submission oldSubmission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
 
         // Optional: Validate that submission belongs to user and hackathon
-        if (submission.getUser().getId() != userId || submission.getHackathon().getId() != hackathonId) {
-            throw new RuntimeException("Unauthorized edit attempt");
+        if (!(oldSubmission.getHackathon().getId() == hackathonId)) {
+            throw new RuntimeException("Submission does not belong to this hackathon");
         }
 
-        submission.setTitle(title);
-        submission.setDescription(description);
-        submission.setProjectUrl(projectUrl);
+        Team team = oldSubmission.getTeam();
+
+        // Check membership in the team
+        Long teamId = team.getId();
+        if (!teamRepository.existsByIdAndUsers_Id(teamId, userId)) {
+            throw new RuntimeException("User is not a member of this team");
+        }
+
+        Submission submissionNew = new Submission();
+        submissionNew.setTitle(title);
+        submissionNew.setDescription(description);
+        submissionNew.setProjectUrl(projectUrl);
+        submissionNew.setSubmitTime(Instant.now());
+        submissionNew.setHackathon(oldSubmission.getHackathon());
+        submissionNew.setUser(oldSubmission.getUser());
+        submissionNew.setTeam(oldSubmission.getTeam());
 
         if (file != null && !file.isEmpty()) {
             try {
@@ -125,13 +152,44 @@ public class SubmissionServiceImpl implements SubmissionService {
 
                 String filePath = uploadDir + System.currentTimeMillis() + "_" + file.getOriginalFilename();
                 file.transferTo(new File(filePath));
-                submission.setFilePath(filePath);
+                submissionNew.setFilePath(filePath);
             } catch (IOException e) {
                 throw new RuntimeException("Failed to upload file", e);
             }
         }
 
-        return submissionRepository.save(submission);
+        submissionNew = submissionRepository.save(submissionNew);
+        team.setSubmission(submissionNew);
+        teamRepository.save(team);
+
+        validateSubmission(userId, hackathonId, submissionNew, file);
+
+        submissionHistoryManager.push(submissionNew.getTeam().getId(), submissionNew.createMemento());
+       return submissionNew;
+    }
+
+    @Transactional
+    public Submission undoLastEdit(Long teamId, Long submissionId, Long hackathonId) {
+        Submission submission = submissionRepository.findById(submissionId)
+                .orElseThrow(() -> new RuntimeException("Submission not found"));
+
+        Team team = submission.getTeam();
+        if (!team.getId().equals(teamId))
+            throw new RuntimeException("Submission does not belong to this team");
+
+        if (!submission.getHackathon().getId().equals(hackathonId))
+            throw new RuntimeException("Submission does not belong to this hackathon");
+
+        SubmissionMemento memento = submissionHistoryManager.pop(teamId)
+                .orElseThrow(() -> new RuntimeException("No history to undo"));
+
+        submission.restore(memento);
+        Submission saved = submissionRepository.save(submission);
+
+        team.setSubmission(saved);
+        teamRepository.save(team);
+
+        return saved;
     }
 
 }
