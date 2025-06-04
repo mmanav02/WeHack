@@ -31,15 +31,13 @@ public class HackathonController {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private CollectionFactory collectionFactory;
 
     // Create a new hackathon
     @PostMapping("/create")
     public Hackathon createHackathon(@RequestBody HackathonRequest request) {
         User organizer = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + request.getUserId()));
-        System.out.println(request.getSmtpPassword());
+
         return hackathonService.createHackathon(
                 request.getTitle(),
                 request.getDescription(),
@@ -58,10 +56,10 @@ public class HackathonController {
 
 
     // Get all hackathons
-    @GetMapping
-    public List<Hackathon> getAllHackathons() {
-        return hackathonService.getAllHackathons();
-    }
+//    @GetMapping
+//    public List<Hackathon> getAllHackathons() {
+//        return hackathonService.getAllHackathons();
+//    }
 
 
     // Publish a hackathon
@@ -87,12 +85,6 @@ public class HackathonController {
 
     @GetMapping("/iterator")
     public ResponseEntity<List<HackathonDto>> listHackathons() {
-        Iterator<Hackathon> it = collectionFactory.hackathons().createIterator();
-        List<HackathonDto> result = new ArrayList<>();
-        while (it.hasNext()) {
-            result.add(HackathonMapper.toDto(it.next()));
-        }
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(hackathonService.listHackathons());
     }
-
 }

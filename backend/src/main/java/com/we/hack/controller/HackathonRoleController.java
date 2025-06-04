@@ -5,7 +5,7 @@ import com.we.hack.mapper.TeamMapper;
 import com.we.hack.model.HackathonRole;
 import com.we.hack.model.Team;
 import com.we.hack.model.User;
-import com.we.hack.service.HackathonRoleService;
+import com.we.hack.service.HackathonService;
 import com.we.hack.service.TeamService;
 import com.we.hack.service.iterator.CollectionFactory;
 import com.we.hack.service.iterator.Iterator;
@@ -21,7 +21,7 @@ import java.util.List;
 public class HackathonRoleController {
 
     @Autowired
-    private HackathonRoleService hackathonRoleService;
+    private HackathonService hackathonService;
 
     @Autowired
     private TeamService teamService;
@@ -32,7 +32,7 @@ public class HackathonRoleController {
     // ✅ Endpoint: POST /hackathon-role/join
     @PostMapping("/join")
     public HackathonRole joinHackathon(@RequestBody JoinHackathonRequest request) {
-        return hackathonRoleService.joinHackathon(
+        return hackathonService.joinHackathon(
                 request.getUserId(),
                 request.getHackathonId(),
                 request.getRole()
@@ -41,13 +41,13 @@ public class HackathonRoleController {
 
     @DeleteMapping("/leave")
     public ResponseEntity<String> leaveHackathon(@RequestBody LeaveHackathonRequest request) {
-        hackathonRoleService.leaveHackathon(request.getUserId(), request.getHackathonId());
+        hackathonService.leaveHackathon(request.getUserId(), request.getHackathonId());
         return ResponseEntity.ok("Left hackathon successfully");
     }
 
     @GetMapping("/hackathons/{hackathonId}/judge-requests")
     public List<HackathonRole> getPendingJudgeRequests(@PathVariable int hackathonId) {
-        return hackathonRoleService.getPendingJudgeRequests(hackathonId);
+        return hackathonService.getPendingJudgeRequests(hackathonId);
     }
 
     @PostMapping("/create-team")
@@ -74,7 +74,7 @@ public class HackathonRoleController {
 
     @PostMapping("/update-status")
     public HackathonRole updateJudgeStatus(@RequestBody JudgeApprovalRequest request) {
-        return hackathonRoleService.updateJudgeStatus(
+        return hackathonService.updateJudgeStatus(
                 request.getHackathonId(),
                 request.getUserId(),
                 request.getStatus()
