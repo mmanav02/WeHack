@@ -2,6 +2,8 @@ package com.we.hack.service;
 
 import com.we.hack.dto.HackathonDto;
 import com.we.hack.dto.MailModes;
+import com.we.hack.dto.TeamDto;
+import com.we.hack.dto.getSubmissionRequest;
 import com.we.hack.model.*;
 
 import java.util.List;
@@ -10,6 +12,9 @@ public interface HackathonService {
     Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode);
     List<Hackathon> getAllHackathons();
     void deleteHackathon(long hackathonId);
+
+    List<TeamDto> listTeams(Hackathon hackathon);
+
     void publishHackathon(int hackathonId);
     void startJudging(int hackathonId);
     void completeHackathon(int hackathonId);

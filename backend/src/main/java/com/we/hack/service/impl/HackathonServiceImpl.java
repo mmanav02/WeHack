@@ -2,7 +2,10 @@ package com.we.hack.service.impl;
 
 import com.we.hack.dto.HackathonDto;
 import com.we.hack.dto.MailModes;
+import com.we.hack.dto.TeamDto;
+import com.we.hack.dto.getSubmissionRequest;
 import com.we.hack.mapper.HackathonMapper;
+import com.we.hack.mapper.TeamMapper;
 import com.we.hack.model.*;
 import com.we.hack.repository.HackathonRepository;
 import com.we.hack.repository.HackathonRoleRepository;
@@ -82,6 +85,16 @@ public class HackathonServiceImpl implements HackathonService {
         List<HackathonDto> result = new ArrayList<>();
         while (it.hasNext()) {
             result.add(HackathonMapper.toDto(it.next()));
+        }
+        return result;
+    }
+
+    @Override
+    public List<TeamDto> listTeams(Hackathon hackathon) {
+        Iterator<Team> it = collectionFactory.teams(hackathon).createIterator();
+        List<TeamDto> result = new ArrayList<>();
+        while (it.hasNext()) {
+            result.add(TeamMapper.toDto(it.next()));   // convertEntity->DTO
         }
         return result;
     }

@@ -1,5 +1,7 @@
 package com.we.hack.service.impl;
 
+import com.we.hack.dto.SubmissionDto;
+import com.we.hack.mapper.SubmissionMapper;
 import com.we.hack.model.Hackathon;
 import com.we.hack.model.Submission;
 import com.we.hack.model.Team;
@@ -10,6 +12,8 @@ import com.we.hack.repository.TeamRepository;
 import com.we.hack.repository.UserRepository;
 import com.we.hack.service.SubmissionService;
 import com.we.hack.service.builder.Submission.SubmissionBuilder;
+import com.we.hack.service.iterator.CollectionFactory;
+import com.we.hack.service.iterator.Iterator;
 import com.we.hack.service.memento.SubmissionHistoryManager;
 import com.we.hack.service.memento.SubmissionMemento;
 import jakarta.transaction.Transactional;
@@ -20,7 +24,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
-import java.util.Optional;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
@@ -39,6 +44,9 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Autowired
     private SubmissionHistoryManager submissionHistoryManager;
+
+    @Autowired
+    private CollectionFactory collectionFactory;
 
     // This is only for builder pattern so not in the SubmissionService Interface and so now Overridden
     @Transactional
@@ -86,7 +94,15 @@ public class SubmissionServiceImpl implements SubmissionService {
         return submission;
     }
 
-
+    @Override
+    public List<SubmissionDto> listSubmissions(Hackathon hackathon, Team team){
+        Iterator<Submission> it = collectionFactory.submissions(team, hackathon).createIterator();
+        List<SubmissionDto> result = new ArrayList<>();
+        while (it.hasNext()) {
+            result.add(SubmissionMapper.toDto(it.next()));
+        }
+        return result;
+    }
 
     @Override
     public Submission saveSubmission(Long userId, int hackathonId, Submission submission) {

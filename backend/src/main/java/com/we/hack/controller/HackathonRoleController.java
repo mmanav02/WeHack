@@ -63,12 +63,7 @@ public class HackathonRoleController {
 
     @GetMapping("/iterator")
     public ResponseEntity<List<TeamDto>> streamTeams(@RequestBody getSubmissionRequest request) {
-        Iterator<Team> it = collectionFactory.teams(request.getHackathon()).createIterator();
-        List<TeamDto> result = new ArrayList<>();
-        while (it.hasNext()) {
-            result.add(TeamMapper.toDto(it.next()));   // convertEntity->DTO
-        }
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(hackathonService.listTeams(request.getHackathon()));
     }
 
 
