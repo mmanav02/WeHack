@@ -1,5 +1,7 @@
 package com.we.hack.service.impl;
 
+import com.we.hack.dto.SubmissionDto;
+import com.we.hack.mapper.SubmissionMapper;
 import com.we.hack.model.Hackathon;
 import com.we.hack.model.Submission;
 import com.we.hack.model.Team;
@@ -11,6 +13,8 @@ import com.we.hack.repository.UserRepository;
 import com.we.hack.service.SubmissionService;
 import com.we.hack.service.adapter.MailServiceAdapter;
 import com.we.hack.service.builder.Submission.SubmissionBuilder;
+import com.we.hack.service.iterator.CollectionFactory;
+import com.we.hack.service.iterator.Iterator;
 import com.we.hack.service.decorator.EmailNotifier;
 import com.we.hack.service.decorator.Notifier;
 import com.we.hack.service.decorator.SlackNotifierDecorator;
@@ -27,6 +31,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -48,6 +54,9 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Autowired
     private SubmissionHistoryManager submissionHistoryManager;
+
+    @Autowired
+    private CollectionFactory collectionFactory;
 
     @Qualifier("organizerMailAdapter")
     @Autowired
@@ -102,7 +111,15 @@ public class SubmissionServiceImpl implements SubmissionService {
         return submission;
     }
 
-
+    @Override
+    public List<SubmissionDto> listSubmissions(Hackathon hackathon, Team team){
+        Iterator<Submission> it = collectionFactory.submissions(team, hackathon).createIterator();
+        List<SubmissionDto> result = new ArrayList<>();
+        while (it.hasNext()) {
+            result.add(SubmissionMapper.toDto(it.next()));
+        }
+        return result;
+    }
 
     @Override
     public Submission saveSubmission(Long userId, int hackathonId, Submission submission) {

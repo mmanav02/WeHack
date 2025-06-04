@@ -1,8 +1,8 @@
 package com.we.hack.service.impl;
 import com.we.hack.model.User;
 import com.we.hack.repository.UserRepository;
+import com.we.hack.service.UserService;
 import org.springframework.stereotype.Service;
-import com.we.hack.service.logger.Logger;
 
 import java.io.IOException;
 import java.util.Optional;

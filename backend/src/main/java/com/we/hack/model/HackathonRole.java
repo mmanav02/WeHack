@@ -25,5 +25,4 @@ public class HackathonRole {
 
     @Enumerated(EnumType.STRING)
     private ApprovalStatus status;
-
 }

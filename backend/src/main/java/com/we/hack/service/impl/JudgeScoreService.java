@@ -3,6 +3,8 @@ package com.we.hack.service.impl;
 import com.we.hack.dto.JudgeScoreRequest;
 import com.we.hack.model.*;
 import com.we.hack.repository.*;
+import com.we.hack.service.bridge.JudgeScoreEvaluator;
+import com.we.hack.service.bridge.ScoreEvaluator;
 import com.we.hack.service.strategy.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -52,15 +54,17 @@ public class JudgeScoreService {
         List<JudgeScore> allScores = judgeScoreRepository.findBySubmission(submission);
 
         // For simplicity, average the scores from each judge first, then apply strategy
-        List<Double> perJudgeAverages = new ArrayList<>();
-        for (JudgeScore score : allScores) {
-            List<Integer> criteria = Arrays.asList(
-                    score.getInnovation(), score.getImpact(), score.getExecution()
-            );
-            perJudgeAverages.add(strategy.calculateScore(criteria));
-        }
-
-        return perJudgeAverages.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+//        List<Double> perJudgeAverages = new ArrayList<>();
+//        for (JudgeScore score : allScores) {
+//            List<Integer> criteria = Arrays.asList(
+//                    score.getInnovation(), score.getImpact(), score.getExecution()
+//            );
+//            perJudgeAverages.add(strategy.calculateScore(criteria));
+//        }
+//
+//        return perJudgeAverages.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        ScoreEvaluator evaluator = new JudgeScoreEvaluator(strategy);
+        return evaluator.evaluate(allScores);
     }
 
     private ScoringStrategy getStrategy(ScoringMethod method) {

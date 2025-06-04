@@ -1,4 +1,4 @@
-package com.we.hack.service.impl;
+package com.we.hack.service;
 
 import com.we.hack.model.User;
 

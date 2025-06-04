@@ -1,6 +1,9 @@
 package com.we.hack.service.proxy;
 
+import com.we.hack.dto.SubmissionDto;
+import com.we.hack.model.Hackathon;
 import com.we.hack.model.Submission;
+import com.we.hack.model.Team;
 import com.we.hack.service.SubmissionService;
 import com.we.hack.service.chain.DescriptionValidator;
 import com.we.hack.service.chain.FileSizeValidator;
@@ -15,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -54,6 +58,13 @@ public class SubmissionServiceProxy implements SubmissionService {
         lastSubmissionTime.put(key, now);
         return submission;
     }
+
+    @Override
+    public List<SubmissionDto> listSubmissions(Hackathon hackathon, Team team) {
+        // This shouldn't be called
+        return null;
+    }
+
 
     @Override
     public Submission saveSubmission(Long userId, int hackathonId, Submission submission) {

@@ -1,7 +1,7 @@
 package com.we.hack.controller;
 
 import com.we.hack.model.User;
-import com.we.hack.service.impl.UserService;
+import com.we.hack.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

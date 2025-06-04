@@ -1,16 +1,21 @@
 package com.we.hack.controller;
 
 import com.we.hack.dto.DeleteHackathonRequest;
+import com.we.hack.dto.HackathonDto;
 import com.we.hack.dto.HackathonRequest;
+import com.we.hack.mapper.HackathonMapper;
 import com.we.hack.model.Hackathon;
 import com.we.hack.model.User;
 import com.we.hack.service.HackathonService;
 import com.we.hack.repository.UserRepository;
+import com.we.hack.service.iterator.CollectionFactory;
+import com.we.hack.service.iterator.Iterator;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -26,12 +31,13 @@ public class HackathonController {
     @Autowired
     private UserRepository userRepository;
 
+
     // Create a new hackathon
     @PostMapping("/create")
     public Hackathon createHackathon(@RequestBody HackathonRequest request) {
         User organizer = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + request.getUserId()));
-        System.out.println(request.getSmtpPassword());
+
         return hackathonService.createHackathon(
                 request.getTitle(),
                 request.getDescription(),
@@ -50,10 +56,10 @@ public class HackathonController {
 
 
     // Get all hackathons
-    @GetMapping
-    public List<Hackathon> getAllHackathons() {
-        return hackathonService.getAllHackathons();
-    }
+//    @GetMapping
+//    public List<Hackathon> getAllHackathons() {
+//        return hackathonService.getAllHackathons();
+//    }
 
 
     // Publish a hackathon
@@ -77,4 +83,8 @@ public class HackathonController {
         return ResponseEntity.ok("Hackathon marked as completed.");
     }
 
+    @GetMapping("/iterator")
+    public ResponseEntity<List<HackathonDto>> listHackathons() {
+        return ResponseEntity.ok(hackathonService.listHackathons());
+    }
 }
