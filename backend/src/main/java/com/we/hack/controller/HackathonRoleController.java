@@ -1,18 +1,19 @@
 package com.we.hack.controller;
 
-import com.we.hack.dto.JoinHackathonRequest;
-import com.we.hack.dto.JudgeApprovalRequest;
-import com.we.hack.dto.LeaveHackathonRequest;
-import com.we.hack.dto.TeamRequest;
+import com.we.hack.dto.*;
+import com.we.hack.mapper.TeamMapper;
 import com.we.hack.model.HackathonRole;
 import com.we.hack.model.Team;
 import com.we.hack.model.User;
 import com.we.hack.service.HackathonRoleService;
 import com.we.hack.service.TeamService;
+import com.we.hack.service.iterator.CollectionFactory;
+import com.we.hack.service.iterator.Iterator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -24,6 +25,9 @@ public class HackathonRoleController {
 
     @Autowired
     private TeamService teamService;
+
+    @Autowired
+    private CollectionFactory collectionFactory;
 
     // ✅ Endpoint: POST /hackathon-role/join
     @PostMapping("/join")
@@ -55,6 +59,16 @@ public class HackathonRoleController {
     public Team addMember(@PathVariable long teamId,
                           @RequestBody long userId) {
         return teamService.addMemberToTeam(teamId, userId);
+    }
+
+    @GetMapping("/iterator")
+    public ResponseEntity<List<TeamDto>> streamTeams(@RequestBody getSubmissionRequest request) {
+        Iterator<Team> it = collectionFactory.teams(request.getHackathon()).createIterator();
+        List<TeamDto> result = new ArrayList<>();
+        while (it.hasNext()) {
+            result.add(TeamMapper.toDto(it.next()));   // convertEntity->DTO
+        }
+        return ResponseEntity.ok(result);
     }
 
 
