@@ -1,4 +1,4 @@
-package com.we.hack.service.Bridge;
+package com.we.hack.service.bridge;
 
 import com.we.hack.model.JudgeScore;
 import com.we.hack.service.strategy.ScoringStrategy;
