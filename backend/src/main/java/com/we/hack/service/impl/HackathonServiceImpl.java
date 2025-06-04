@@ -11,6 +11,7 @@ import com.we.hack.repository.UserRepository;
 import com.we.hack.service.HackathonService;
 import com.we.hack.service.adapter.MailgunAdapter;
 import com.we.hack.service.adapter.OrganizerMailAdapter;
+import com.we.hack.service.factory.HackathonRoleFactory;
 import com.we.hack.service.iterator.CollectionFactory;
 import com.we.hack.service.iterator.Iterator;
 import com.we.hack.service.observer.HackathonNotificationManager;
@@ -30,7 +31,7 @@ public class HackathonServiceImpl implements HackathonService {
     private HackathonRepository hackathonRepository;
 
     @Autowired
-    UserRepository userRepository;
+    private UserRepository userRepository;
 
     @Autowired
     private HackathonRoleRepository hackathonRoleRepository;
@@ -144,17 +145,7 @@ public class HackathonServiceImpl implements HackathonService {
         Hackathon hackathon = hackathonRepository.findById(hackathonId)
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
 
-        HackathonRole hackathonRole = new HackathonRole();
-        hackathonRole.setUser(user);
-        hackathonRole.setHackathon(hackathon);
-        hackathonRole.setRole(role);
-
-        //  Logic: auto-approve participant, pending for judge
-        if (role == Role.PARTICIPANT) {
-            hackathonRole.setStatus(ApprovalStatus.APPROVED);
-        } else if (role == Role.JUDGE) {
-            hackathonRole.setStatus(ApprovalStatus.PENDING);
-        }
+        HackathonRole hackathonRole = HackathonRoleFactory.create(user, hackathon, role);
 
         return hackathonRoleRepository.save(hackathonRole);
     }
