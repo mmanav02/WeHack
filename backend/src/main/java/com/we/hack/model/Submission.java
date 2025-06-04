@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
 import com.we.hack.service.memento.SubmissionMemento;
-import com.we.hack.visitor.AnalyticsVisitor;
+import com.we.hack.service.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.*;
 

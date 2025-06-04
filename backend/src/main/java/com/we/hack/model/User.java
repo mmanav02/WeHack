@@ -1,6 +1,6 @@
 package com.we.hack.model;
 
-import com.we.hack.visitor.AnalyticsVisitor;
+import com.we.hack.service.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.*;
 

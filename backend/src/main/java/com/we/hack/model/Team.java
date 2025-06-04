@@ -1,15 +1,13 @@
 package com.we.hack.model;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonIdentityInfo;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.fasterxml.jackson.annotation.ObjectIdGenerators;
-import com.we.hack.visitor.AnalyticsVisitor;
+import com.we.hack.service.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.mapping.Join;
 
 import java.util.ArrayList;
 import java.util.List;

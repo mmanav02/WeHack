@@ -1,4 +1,4 @@
-package com.we.hack.visitor;
+package com.we.hack.service.visitor;
 
 import com.we.hack.model.*;
 

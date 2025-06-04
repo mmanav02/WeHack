@@ -2,8 +2,8 @@ package com.we.hack.controller;
 
 import com.we.hack.model.*;
 import com.we.hack.repository.*;
-import com.we.hack.visitor.AnalyticsCollector;
-import com.we.hack.visitor.AnalyticsVisitor;
+import com.we.hack.service.visitor.AnalyticsCollector;
+import com.we.hack.service.visitor.AnalyticsVisitor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
