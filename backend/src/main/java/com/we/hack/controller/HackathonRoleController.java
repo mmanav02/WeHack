@@ -62,7 +62,7 @@ public class HackathonRoleController {
     }
 
     @GetMapping("/iterator")
-    public ResponseEntity<List<TeamDto>> streamTeams(@RequestBody getSubmissionRequest request) {
+    public ResponseEntity<List<TeamDto>> listTeams(@RequestBody getSubmissionRequest request) {
         return ResponseEntity.ok(hackathonService.listTeams(request.getHackathon()));
     }
 
