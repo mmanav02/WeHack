@@ -9,17 +9,26 @@ import com.we.hack.repository.SubmissionRepository;
 import com.we.hack.repository.TeamRepository;
 import com.we.hack.repository.UserRepository;
 import com.we.hack.service.SubmissionService;
+import com.we.hack.service.adapter.MailServiceAdapter;
 import com.we.hack.service.builder.Submission.SubmissionBuilder;
+import com.we.hack.service.decorator.EmailNotifier;
+import com.we.hack.service.decorator.Notifier;
+import com.we.hack.service.decorator.SlackNotifierDecorator;
 import com.we.hack.service.memento.SubmissionHistoryManager;
 import com.we.hack.service.memento.SubmissionMemento;
+import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -39,6 +48,13 @@ public class SubmissionServiceImpl implements SubmissionService {
 
     @Autowired
     private SubmissionHistoryManager submissionHistoryManager;
+
+    @Qualifier("organizerMailAdapter")
+    @Autowired
+    private MailServiceAdapter mailServiceAdapter;
+
+    @Autowired
+    private ApplicationContext context;
 
     // This is only for builder pattern so not in the SubmissionService Interface and so now Overridden
     @Transactional
@@ -191,5 +207,21 @@ public class SubmissionServiceImpl implements SubmissionService {
 
         return saved;
     }
+
+    public void notifyOrganizer(Hackathon hackathon, User organizer, List<String> recipients, String subject, String content) {
+        Notifier notifier = new EmailNotifier(mailServiceAdapter);
+
+        if (hackathon.isSlackEnabled()) {
+            SlackNotifierDecorator slackDecorator = context.getBean(SlackNotifierDecorator.class);
+            slackDecorator.setWrappee(notifier);
+            notifier = slackDecorator;
+        }
+
+        for(String email : recipients){
+            notifier.notify(organizer, email, subject, content);
+        }
+    }
+
+    
 
 }

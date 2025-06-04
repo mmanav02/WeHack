@@ -1,9 +1,11 @@
 package com.we.hack.controller;
 
 import com.we.hack.dto.EditSubmissionRequest;
-import com.we.hack.dto.SubmitProjectRequest;
 import com.we.hack.dto.UndoSubmitProjectRequest;
+import com.we.hack.model.Hackathon;
 import com.we.hack.model.Submission;
+import com.we.hack.model.Team;
+import com.we.hack.model.User;
 import com.we.hack.service.SubmissionService;
 import com.we.hack.service.builder.Submission.ConcreteSubmissionBuilder;
 import com.we.hack.service.builder.Submission.SubmissionBuilder;
@@ -13,6 +15,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/submissions")
@@ -23,16 +29,16 @@ public class SubmissionController {
 
     // POST /submissions/{hackathonId}/user/{userId}
 //    @PostMapping("/{hackathonId}/user/{userId}")
-    @PostMapping("/submitProject")
+
+    @PostMapping(value = "/submitProject", consumes = "multipart/form-data")
     public Submission submitProject(
-//            @PathVariable int hackathonId,
-//            @PathVariable Long userId,
-//            @RequestParam("title") String title,
-//            @RequestParam("description") String description,
-//            @RequestParam("projectUrl") String projectUrl,
-//            @RequestParam(value = "file", required = false) MultipartFile file
-            @RequestBody SubmitProjectRequest request
-            ) {
+            @RequestParam("hackathonId") int hackathonId,
+            @RequestParam("userId") Long userId,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("projectUrl") String projectUrl,
+            @RequestPart("file") MultipartFile file
+    ) {
 
 //        Submission submission = new Submission();
 //        submission.setTitle(title);
@@ -60,11 +66,39 @@ public class SubmissionController {
 //            }
 //        }
 
-        SubmissionBuilder builder = new ConcreteSubmissionBuilder()
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .projectUrl(request.getProjectUrl());
-        return submissionService.createFinalSubmission(builder, request.getUserId(), request.getHackathonId(), request.getFile());
+        Submission submission = submissionService.createFinalSubmission(
+                new ConcreteSubmissionBuilder()
+                        .title(title)
+                        .description(description)
+                        .projectUrl(projectUrl),
+                userId,
+                hackathonId,
+                file
+        );
+        Hackathon hackathon = submission.getHackathon(); // assuming submission has hackathon reference
+        User organizer = hackathon.getOrganizer();       // make sure this relationship exists
+        User submittingUser = submission.getUser();
+        Team team = submission.getTeam();
+
+        Set<String> recipientEmails = new HashSet<>();
+        recipientEmails.add(submittingUser.getEmail());
+        if (team != null && team.getUsers() != null) {
+            for (User member : team.getUsers()) {
+                if (member != null && member.getEmail() != null) {
+                    recipientEmails.add(member.getEmail()); // Set ensures no duplicates
+                }
+            }
+        }
+
+        submissionService.notifyOrganizer(
+                submission.getHackathon(),
+                organizer,
+                new ArrayList<>(recipientEmails),
+                "New Submission for: " + submission.getHackathon().getTitle(),
+                "Team " + team.getName() + " just submitted their project!"
+        );
+
+        return submission;
     }
 
     @PutMapping("/editSubmission")

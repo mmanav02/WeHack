@@ -19,6 +19,10 @@ public class Hackathon {
     private String description;
     private String date; // You can later change it to LocalDateTime if needed
     private String status; // Example values: "Draft", "Published", etc.
+    @Getter
+    @Setter
+    @Column(name = "slack_enabled", nullable = false)
+    private boolean slackEnabled;
 
     @ManyToOne
     @JoinColumn(name = "organizer_id")
