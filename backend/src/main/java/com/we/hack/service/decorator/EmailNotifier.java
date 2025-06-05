@@ -13,6 +13,7 @@ public class EmailNotifier implements Notifier {
 
     @Override
     public void notify(User organizer, String recipient, String subject, String content) {
+        System.out.println("EmailNotifier: sending email to " + recipient);
         mailServiceAdapter.sendMail(organizer, recipient, subject, content);
     }
 }

@@ -27,6 +27,7 @@ public class SlackNotifierDecorator extends NotifierDecorator {
     @Override
     public void notify(User organizer, String recipient, String subject, String content) {
         sendSlackMessage("*" + subject + "*\n" + content);
+        System.out.println("SlackNotifier: sending slack message");
         super.notify(organizer, recipient, subject, content);
     }
 

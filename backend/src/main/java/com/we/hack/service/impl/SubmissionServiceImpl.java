@@ -247,16 +247,17 @@ public class SubmissionServiceImpl implements SubmissionService {
     }
 
     public void notifyOrganizer(Hackathon hackathon, User organizer, List<String> recipients, String subject, String content) {
-        Notifier notifier = new EmailNotifier(mailServiceAdapter);
+        Notifier baseNotifier = new EmailNotifier(mailServiceAdapter);
+
+        for (String email : recipients) {
+            baseNotifier.notify(organizer, email, subject, content);
+        }
 
         if (hackathon.isSlackEnabled()) {
             SlackNotifierDecorator slackDecorator = context.getBean(SlackNotifierDecorator.class);
-            slackDecorator.setWrappee(notifier);
-            notifier = slackDecorator;
-        }
-
-        for(String email : recipients){
-            notifier.notify(organizer, email, subject, content);
+            slackDecorator.setWrappee(baseNotifier);
+            baseNotifier = slackDecorator;
+            baseNotifier.notify(organizer, organizer.getEmail(), subject, content);
         }
     }
 
