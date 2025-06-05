@@ -20,4 +20,6 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
                                   @Param("hackathonId") Long hackathonId);
 
     List<Submission> findByHackathonIdAndUserId(Long hackathonId, Long userId);
+
+    List<Submission> findByHackathonId(int HackathonId);
 }

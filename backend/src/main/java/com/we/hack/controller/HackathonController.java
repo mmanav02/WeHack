@@ -5,6 +5,7 @@ import com.we.hack.dto.HackathonDto;
 import com.we.hack.dto.HackathonRequest;
 import com.we.hack.mapper.HackathonMapper;
 import com.we.hack.model.Hackathon;
+import com.we.hack.model.Submission;
 import com.we.hack.model.User;
 import com.we.hack.service.HackathonService;
 import com.we.hack.repository.UserRepository;
@@ -86,5 +87,11 @@ public class HackathonController {
     @GetMapping("/iterator")
     public ResponseEntity<List<HackathonDto>> listHackathons() {
         return ResponseEntity.ok(hackathonService.listHackathons());
+    }
+
+    @GetMapping("/{hackathonId}/leaderboard")
+    public ResponseEntity<List<Submission>> getLeaderboard(@PathVariable Long hackathonId) {
+        List<Submission> leaderboard = hackathonService.getLeaderboard(hackathonId);
+        return ResponseEntity.ok(leaderboard);
     }
 }

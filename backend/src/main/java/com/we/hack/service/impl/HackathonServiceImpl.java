@@ -3,14 +3,10 @@ package com.we.hack.service.impl;
 import com.we.hack.dto.HackathonDto;
 import com.we.hack.dto.MailModes;
 import com.we.hack.dto.TeamDto;
-import com.we.hack.dto.getSubmissionRequest;
 import com.we.hack.mapper.HackathonMapper;
 import com.we.hack.mapper.TeamMapper;
 import com.we.hack.model.*;
-import com.we.hack.repository.HackathonRepository;
-import com.we.hack.repository.HackathonRoleRepository;
-import com.we.hack.repository.SubmissionRepository;
-import com.we.hack.repository.UserRepository;
+import com.we.hack.repository.*;
 import com.we.hack.service.HackathonService;
 import com.we.hack.service.adapter.MailgunAdapter;
 import com.we.hack.service.adapter.OrganizerMailAdapter;
@@ -21,6 +17,9 @@ import com.we.hack.service.observer.HackathonNotificationManager;
 import com.we.hack.service.observer.HackathonObserverRegistry;
 import com.we.hack.service.observer.JudgeNotifier;
 import com.we.hack.service.state.*;
+import com.we.hack.service.template.BuildPhaseScoreboard;
+import com.we.hack.service.template.JudgingPhaseScoreboard;
+import com.we.hack.service.template.ScoreboardTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -50,6 +49,9 @@ public class HackathonServiceImpl implements HackathonService {
 
     @Autowired
     private OrganizerMailAdapter organizerMailAdapter;
+
+    @Autowired
+    private JudgeScoreRepository judgeScoreRepository;
 
     @Override
     public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode) {
@@ -230,4 +232,19 @@ public class HackathonServiceImpl implements HackathonService {
         return hackathonRoleRepository.save(roleEntry);
     }
 
+    @Override
+    public List<Submission> getLeaderboard(Long hackathonId) {
+        Hackathon hackathon = hackathonRepository.findById(Math.toIntExact(hackathonId))
+                .orElseThrow(() -> new RuntimeException("Hackathon not found"));
+        String status = hackathon.getStatus();
+
+        ScoreboardTemplate scoreboard;
+        if (status.equals("Draft") || status.equals("Published")) {
+            scoreboard = new BuildPhaseScoreboard();
+        } else {
+            scoreboard = new JudgingPhaseScoreboard();
+        }
+
+        return scoreboard.generate(hackathonId);
+    }
 }
