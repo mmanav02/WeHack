@@ -25,6 +25,7 @@ import com.we.hack.service.template.ScoreboardTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -59,7 +60,7 @@ public class HackathonServiceImpl implements HackathonService {
     private JudgeScoreRepository judgeScoreRepository;
 
     @Override
-    public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode) {
+    public Hackathon createHackathon(String title, String description, Instant startDate, Instant endDate, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode) {
         if(mailMode == MailModes.ORGANIZED) {
             User organizerFetch = userRepository.getReferenceById((long) organizer.getId());
             organizerFetch.setSmtpPassword(smtpPassword);
@@ -69,7 +70,8 @@ public class HackathonServiceImpl implements HackathonService {
         Hackathon hackathon = new Hackathon();
         hackathon.setTitle(title);
         hackathon.setDescription(description);
-        hackathon.setDate(date);
+        hackathon.setStartDate(startDate);
+        hackathon.setEndDate(endDate);
         hackathon.setOrganizer(organizer);
         hackathon.setScoringMethod(scoringMethod);
         hackathon.setStatus("Draft");

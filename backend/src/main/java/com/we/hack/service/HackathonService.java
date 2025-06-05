@@ -6,10 +6,11 @@ import com.we.hack.dto.TeamDto;
 import com.we.hack.dto.getSubmissionRequest;
 import com.we.hack.model.*;
 
+import java.time.Instant;
 import java.util.List;
 
 public interface HackathonService {
-    Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode);
+    Hackathon createHackathon(String title, String description, Instant startDate, Instant endDate, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode);
     List<Hackathon> getAllHackathons();
     void deleteHackathon(long hackathonId);
 
