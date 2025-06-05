@@ -21,6 +21,7 @@ import com.we.hack.service.iterator.Iterator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -46,14 +47,11 @@ public class SubmissionController {
     @Autowired
     private TeamRepository teamRepository;
 
-    @PostMapping("/submitProject")
     // POST /submissions/{hackathonId}/user/{userId}
 //    @PostMapping("/{hackathonId}/user/{userId}")
 
     @PostMapping(value = "/submitProject", consumes = "multipart/form-data")
     public Submission submitProject(
-            @RequestBody SubmitProjectRequest request
-            ) {
             @RequestParam("hackathonId") int hackathonId,
             @RequestParam("userId") Long userId,
             @RequestParam("title") String title,
@@ -63,69 +61,10 @@ public class SubmissionController {
     ) {
 
         SubmissionBuilder builder = new ConcreteSubmissionBuilder()
-                .title(request.getTitle())
-                .description(request.getDescription())
-                .projectUrl(request.getProjectUrl());
-        return submissionService.createFinalSubmission(builder, request.getUserId(), request.getHackathonId(), request.getFile());
-//        Submission submission = new Submission();
-//        submission.setTitle(title);
-//        submission.setDescription(description);
-//        submission.setProjectUrl(projectUrl);
-//        submission.setFilePath("uploads/" + new File(filePath).getName());
-
-//        submissionService.validateSubmission(userId, hackathonId, submission, file);
-//
-//        String filePath = null;
-//
-//        if (file != null && !file.isEmpty()) {
-//            try {
-//                String uploadDir = System.getProperty("user.dir") + "/uploads/";
-//                File directory = new File(uploadDir);
-//                if (!directory.exists()) directory.mkdirs();
-//
-//                filePath = uploadDir + System.currentTimeMillis() + "_" + file.getOriginalFilename();
-//                file.transferTo(new File(filePath));
-//
-//                // Set relative path to store in DB
-//                submission.setFilePath("uploads/" + new File(filePath).getName());
-//            } catch (Exception e) {
-//                throw new RuntimeException("File upload failed", e);
-//            }
-//        }
-
-        Submission submission = submissionService.createFinalSubmission(
-                new ConcreteSubmissionBuilder()
-                        .title(title)
-                        .description(description)
-                        .projectUrl(projectUrl),
-                userId,
-                hackathonId,
-                file
-        );
-        Hackathon hackathon = submission.getHackathon(); // assuming submission has hackathon reference
-        User organizer = hackathon.getOrganizer();       // make sure this relationship exists
-        User submittingUser = submission.getUser();
-        Team team = submission.getTeam();
-
-        Set<String> recipientEmails = new HashSet<>();
-        recipientEmails.add(submittingUser.getEmail());
-        if (team != null && team.getUsers() != null) {
-            for (User member : team.getUsers()) {
-                if (member != null && member.getEmail() != null) {
-                    recipientEmails.add(member.getEmail()); // Set ensures no duplicates
-                }
-            }
-        }
-
-        submissionService.notifyOrganizer(
-                submission.getHackathon(),
-                organizer,
-                new ArrayList<>(recipientEmails),
-                "New Submission for: " + submission.getHackathon().getTitle(),
-                "Team " + team.getName() + " just submitted their project!"
-        );
-
-        return submission;
+                .title(title)
+                .description(description)
+                .projectUrl(projectUrl);
+        return submissionService.createFinalSubmission(builder, userId, hackathonId, file);
     }
 
     @PutMapping("/editSubmission")
@@ -134,8 +73,6 @@ public class SubmissionController {
             ) {
         return submissionService.editSubmission(request.getHackathonId(), request.getUserId(), request.getSubmissionId(), request.getTitle(), request.getDescription(), request.getProjectUrl(), request.getFile());
     }
-
-
 
     @GetMapping("/iterator")
     public ResponseEntity<List<SubmissionDto>> listSubmissions(@RequestBody getSubmissionRequest request) {

@@ -31,11 +31,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.*;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 
 @Service
 public class SubmissionServiceImpl implements SubmissionService {
@@ -87,6 +85,29 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .setUser(user)
                 .setHackathon(hackathon)
                 .build();
+
+         // assuming submission has hackathon reference
+        User organizer = hackathon.getOrganizer();       // make sure this relationship exists
+        User submittingUser = submission.getUser();
+
+        Set<String> recipientEmails = new HashSet<>();
+        recipientEmails.add(submittingUser.getEmail());
+        if (team != null && team.getUsers() != null) {
+            for (User member : team.getUsers()) {
+                if (member != null && member.getEmail() != null) {
+                    recipientEmails.add(member.getEmail()); // Set ensures no duplicates
+                }
+            }
+        }
+
+        notifyOrganizer(
+                submission.getHackathon(),
+                organizer,
+                new ArrayList<>(recipientEmails),
+                "New Submission for: " + submission.getHackathon().getTitle(),
+                "Team " + team.getName() + " just submitted their project!"
+        );
+
 
         if (file != null && !file.isEmpty()) {
             try {
