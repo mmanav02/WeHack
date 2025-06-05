@@ -3,16 +3,14 @@ package com.we.hack.service.impl;
 import com.we.hack.dto.HackathonDto;
 import com.we.hack.dto.MailModes;
 import com.we.hack.dto.TeamDto;
-import com.we.hack.dto.getSubmissionRequest;
 import com.we.hack.mapper.HackathonMapper;
 import com.we.hack.mapper.TeamMapper;
 import com.we.hack.model.*;
-import com.we.hack.repository.HackathonRepository;
-import com.we.hack.repository.HackathonRoleRepository;
-import com.we.hack.repository.SubmissionRepository;
-import com.we.hack.repository.UserRepository;
+import com.we.hack.repository.*;
 import com.we.hack.service.HackathonService;
+import com.we.hack.service.adapter.MailServiceAdapter;
 import com.we.hack.service.adapter.MailgunAdapter;
+import com.we.hack.service.adapter.NullMailServiceAdapter;
 import com.we.hack.service.adapter.OrganizerMailAdapter;
 import com.we.hack.service.factory.HackathonRoleFactory;
 import com.we.hack.service.iterator.CollectionFactory;
@@ -21,6 +19,9 @@ import com.we.hack.service.observer.HackathonNotificationManager;
 import com.we.hack.service.observer.HackathonObserverRegistry;
 import com.we.hack.service.observer.JudgeNotifier;
 import com.we.hack.service.state.*;
+import com.we.hack.service.template.BuildPhaseScoreboard;
+import com.we.hack.service.template.JudgingPhaseScoreboard;
+import com.we.hack.service.template.ScoreboardTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -49,7 +50,13 @@ public class HackathonServiceImpl implements HackathonService {
     private MailgunAdapter mailgunAdapter;
 
     @Autowired
+    private NullMailServiceAdapter nullMailServiceAdapter;
+
+    @Autowired
     private OrganizerMailAdapter organizerMailAdapter;
+
+    @Autowired
+    private JudgeScoreRepository judgeScoreRepository;
 
     @Override
     public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode) {
@@ -205,29 +212,35 @@ public class HackathonServiceImpl implements HackathonService {
 
         roleEntry.setStatus(status);
 
-        if(hackathon.getMailMode() == MailModes.ORGANIZED) {
-            if (status.equals(ApprovalStatus.APPROVED)) {
-                JudgeNotifier judgeNotifier = new JudgeNotifier(judgeEmail, Organizer, organizerMailAdapter);
-                judgeNotifier.update("Hackathon \"" + hackathon.getTitle() + "\" is now Published!");
-                HackathonObserverRegistry.registerObserver(
-                        Math.toIntExact(hackathonId),judgeNotifier
-                );
+        MailServiceAdapter adapter = switch (hackathon.getMailMode()) {
+            case ORGANIZED -> organizerMailAdapter;
+            case MAILGUN -> mailgunAdapter;
+            case NONE -> nullMailServiceAdapter;
+        };
 
-                System.out.println("Judge request approved");
-            }
-        }else if(hackathon.getMailMode() == MailModes.MAILGUN){
-            if (status.equals(ApprovalStatus.APPROVED)) {
-                JudgeNotifier judgeNotifier = new JudgeNotifier(judgeEmail, Organizer, mailgunAdapter);
-                judgeNotifier.update("Hackathon \"" + hackathon.getTitle() + "\" is now Published!");
-                HackathonObserverRegistry.registerObserver(
-                        Math.toIntExact(hackathonId),
-                        new JudgeNotifier(judgeEmail, Organizer, mailgunAdapter)
-                );
-
-                System.out.println("Judge request approved");
-            }
+        if (status.equals(ApprovalStatus.APPROVED)) {
+            JudgeNotifier judgeNotifier = new JudgeNotifier(judgeEmail, Organizer, adapter);
+            judgeNotifier.update(hackathon.getTitle() + ": Judge Request Approved!");
+            HackathonObserverRegistry.registerObserver(
+                    Math.toIntExact(hackathonId), judgeNotifier
+            );
         }
         return hackathonRoleRepository.save(roleEntry);
     }
 
+    @Override
+    public List<Submission> getLeaderboard(Long hackathonId) {
+        Hackathon hackathon = hackathonRepository.findById(Math.toIntExact(hackathonId))
+                .orElseThrow(() -> new RuntimeException("Hackathon not found"));
+        String status = hackathon.getStatus();
+
+        ScoreboardTemplate scoreboard;
+        if (status.equals("Draft") || status.equals("Published")) {
+            scoreboard = new BuildPhaseScoreboard();
+        } else {
+            scoreboard = new JudgingPhaseScoreboard();
+        }
+
+        return scoreboard.generate(hackathonId);
+    }
 }
