@@ -225,7 +225,7 @@ const Navbar = () => {
                 >
                   <MenuItem disabled>
                     <Typography variant="body2">
-                      Welcome, {user.name || user.email}
+                      Welcome, {user.username || user.email}
                     </Typography>
                   </MenuItem>
                   <MenuItem onClick={handleLogout}>

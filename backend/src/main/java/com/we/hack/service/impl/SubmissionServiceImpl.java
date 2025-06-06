@@ -261,6 +261,8 @@ public class SubmissionServiceImpl implements SubmissionService {
         }
     }
 
-    
-
+    @Override
+    public List<Submission> findByHackathonId(int hackathonId) {
+        return submissionRepository.findByHackathonId(hackathonId);
+    }
 }

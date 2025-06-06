@@ -4,7 +4,7 @@ import { authAPI } from '../services/api';
 interface User {
   id: number;
   email: string;
-  name: string;
+  username: string;
   // Add other user properties as needed based on your backend User model
 }
 

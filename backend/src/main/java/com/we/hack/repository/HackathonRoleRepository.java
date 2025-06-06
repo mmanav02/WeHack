@@ -12,4 +12,5 @@ public interface HackathonRoleRepository extends JpaRepository<HackathonRole, Lo
     List<HackathonRole> findByHackathonIdAndRoleAndStatus(int hackathonId, Role role, ApprovalStatus status);
     Optional<HackathonRole> findByUserIdAndHackathonId(Long user_id, Long hackathon_id);
     List<HackathonRole> findByHackathonIdAndRole(int hackathonId, Role role);
+    void deleteByHackathonId(int hackathonId);
 }

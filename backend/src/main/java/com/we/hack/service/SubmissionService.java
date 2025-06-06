@@ -15,4 +15,7 @@ public interface SubmissionService {
 
     Submission saveSubmission(Long userId, int hackathonId, Submission submission);
     Submission editSubmission(int hackathonId, Long userId, Long submissionId, String title, String description, String projectUrl, MultipartFile file);
+    
+    // Add method to find submissions by hackathon ID
+    List<Submission> findByHackathonId(int hackathonId);
 }

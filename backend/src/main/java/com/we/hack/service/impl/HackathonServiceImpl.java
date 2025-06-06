@@ -24,6 +24,7 @@ import com.we.hack.service.template.JudgingPhaseScoreboard;
 import com.we.hack.service.template.ScoreboardTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +59,9 @@ public class HackathonServiceImpl implements HackathonService {
     @Autowired
     private JudgeScoreRepository judgeScoreRepository;
 
+    @Autowired
+    private TeamRepository teamRepository;
+
     @Override
     public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode) {
         if(mailMode == MailModes.ORGANIZED) {
@@ -77,7 +81,18 @@ public class HackathonServiceImpl implements HackathonService {
         return hackathonRepository.save(hackathon);
     }
 
+    @Transactional
     public void deleteHackathon(long hackathonId) {
+        // First, delete all related HackathonRole records to avoid foreign key constraint
+        hackathonRoleRepository.deleteByHackathonId((int) hackathonId);
+        
+        // Second, delete all related submissions
+        submissionRepository.deleteByHackathonId((int) hackathonId);
+        
+        // Third, delete all related Team records
+        teamRepository.deleteByHackathonId((int) hackathonId);
+        
+        // Finally, delete the hackathon itself
         hackathonRepository.deleteById((int) hackathonId);
     }
 
@@ -187,9 +202,9 @@ public class HackathonServiceImpl implements HackathonService {
 
     @Override
     public List<HackathonRole> getPendingJudgeRequests(int hackathonId) {
-        return hackathonRoleRepository.findByHackathonIdAndRoleAndStatus(
-                hackathonId, Role.JUDGE, ApprovalStatus.PENDING
-        );
+        // Return all judge requests for the hackathon (PENDING, APPROVED, REJECTED)
+        // to show complete status to organizer
+        return hackathonRoleRepository.findByHackathonIdAndRole(hackathonId, Role.JUDGE);
     }
 
     @Override
@@ -212,7 +227,10 @@ public class HackathonServiceImpl implements HackathonService {
 
         roleEntry.setStatus(status);
 
-        MailServiceAdapter adapter = switch (hackathon.getMailMode()) {
+        // Handle null mailMode with default fallback
+        MailModes mailMode = hackathon.getMailMode() != null ? hackathon.getMailMode() : MailModes.NONE;
+        
+        MailServiceAdapter adapter = switch (mailMode) {
             case ORGANIZED -> organizerMailAdapter;
             case MAILGUN -> mailgunAdapter;
             case NONE -> nullMailServiceAdapter;

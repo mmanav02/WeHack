@@ -10,4 +10,6 @@ public class HackathonDto {
     private String title;
     private String description;
     private String date;
+    private String status;
+    private Long organizerId;
 }

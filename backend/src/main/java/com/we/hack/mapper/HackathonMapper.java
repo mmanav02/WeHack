@@ -13,6 +13,9 @@ public final class HackathonMapper {
                 .title(hackathon.getTitle())
                 .description(hackathon.getDescription())
                 .date(hackathon.getDate())
+                .status(hackathon.getStatus())
+                .organizerId(hackathon.getOrganizer() != null ? 
+                           (long) hackathon.getOrganizer().getId() : null)
                 .build();
     }
 }

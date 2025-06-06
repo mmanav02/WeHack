@@ -1,8 +1,10 @@
 import { Typography, Container, Paper, TextField, Button, Stack, FormControl, InputLabel, Select, MenuItem, Box } from '@mui/material';
 import React, { useState } from 'react';
 import { hackathonAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const CreateHackathonPage: React.FC = () => {
+  const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState(''); // Consider using a date picker component
@@ -10,14 +12,17 @@ const CreateHackathonPage: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Placeholder userId - replace with actual authenticated user ID
-  const placeholderUserId = 1;
-
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError('');
     setSuccess('');
+
+    // Check if user is authenticated
+    if (!user) {
+      setError('You must be logged in to create a hackathon.');
+      return;
+    }
 
     // Basic validation (add more as needed)
     if (!title || !description || !date || !scoringMethod) {
@@ -27,7 +32,7 @@ const CreateHackathonPage: React.FC = () => {
 
     try {
       const response = await hackathonAPI.create({
-        userId: placeholderUserId,
+        userId: user.id,
         title,
         description,
         date,

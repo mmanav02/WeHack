@@ -91,5 +91,9 @@ public class SubmissionServiceProxy implements SubmissionService {
         return realSubmissionService.editSubmission(hackathonId, userId, submissionId, title, description, projectUrl, file);
     }
 
+    @Override
+    public List<Submission> findByHackathonId(int hackathonId) {
+        return realSubmissionService.findByHackathonId(hackathonId);
+    }
 
 }

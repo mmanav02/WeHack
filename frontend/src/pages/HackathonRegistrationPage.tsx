@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
   Box, 
   Typography, 
@@ -6,342 +7,364 @@ import {
   Button, 
   Container, 
   Paper,
-  Grid,
-  Chip,
-  IconButton,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
+  Alert,
+  CircularProgress,
+  Divider,
+  Card,
+  CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
-import type { SelectChangeEvent } from '@mui/material/Select';
+import { Group as GroupIcon, Celebration as CelebrationIcon, Login as LoginIcon } from '@mui/icons-material';
+import { hackathonRegistrationAPI } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const HackathonRegistrationPage = () => {
-  const [teamMembers, setTeamMembers] = useState(['']);
-  const [formData, setFormData] = useState({
-    teamName: '',
-    projectName: '',
-    projectDescription: '',
-    projectCategory: '',
-    githubLink: '',
-    demoLink: '',
-    technologies: [] as string[],
-  });
-  const [newTechnology, setNewTechnology] = useState('');
-  const [errors, setErrors] = useState({
-    teamName: '',
-    projectName: '',
-    projectDescription: '',
-    projectCategory: '',
-    teamMembers: '',
-  });
+  const { hackathonId } = useParams<{ hackathonId: string }>();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
+  const [teamName, setTeamName] = useState('');
+  const [teamNameError, setTeamNameError] = useState('');
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error when user starts typing
-    if (name) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+  // Debug logging
+  useEffect(() => {
+    console.log('🔍 HackathonRegistrationPage - Auth Debug Info:');
+    console.log('- authLoading:', authLoading);
+    console.log('- user:', user);
+    console.log('- user exists:', !!user);
+    console.log('- localStorage user:', localStorage.getItem('user'));
+  }, [user, authLoading]);
+
+  // Check authentication on component mount and when auth state changes
+  useEffect(() => {
+    console.log('🔒 Authentication check triggered');
+    console.log('- authLoading:', authLoading, '- user:', !!user);
+    
+    if (!authLoading) {
+      if (!user) {
+        console.log('❌ No user found, should show auth dialog');
+        setShowAuthDialog(true);
+      } else {
+        console.log('✅ User found:', user.email);
+        setShowAuthDialog(false);
+      }
     }
-  };
+  }, [user, authLoading]);
 
-  const handleSelectChange = (e: SelectChangeEvent<string>) => {
-    const { name, value } = e.target;
-     setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-     if (name) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+  const handleTeamNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTeamName(e.target.value);
+    if (teamNameError) {
+      setTeamNameError('');
     }
-  };
-
-
-  const handleTeamMemberChange = (index: number, value: string) => {
-    const newTeamMembers = [...teamMembers];
-    newTeamMembers[index] = value;
-    setTeamMembers(newTeamMembers);
-  };
-
-  const addTeamMember = () => {
-    setTeamMembers([...teamMembers, '']);
-  };
-
-  const removeTeamMember = (index: number) => {
-    const newTeamMembers = teamMembers.filter((_, i) => i !== index);
-    setTeamMembers(newTeamMembers);
-  };
-
-  const handleAddTechnology = () => {
-    if (newTechnology && !formData.technologies.includes(newTechnology)) {
-      setFormData(prev => ({
-        ...prev,
-        technologies: [...prev.technologies, newTechnology]
-      }));
-      setNewTechnology('');
-    }
-  };
-
-  const handleRemoveTechnology = (tech: string) => {
-    setFormData(prev => ({
-      ...prev,
-      technologies: prev.technologies.filter(t => t !== tech)
-    }));
   };
 
   const validateForm = () => {
-    let isValid = true;
-    const newErrors = { ...errors };
-
-    if (!formData.teamName.trim()) {
-      newErrors.teamName = 'Team name is required';
-      isValid = false;
+    if (!teamName.trim()) {
+      setTeamNameError('Team name is required');
+      return false;
     }
-
-    if (!formData.projectName.trim()) {
-      newErrors.projectName = 'Project name is required';
-      isValid = false;
-    }
-
-    if (!formData.projectDescription.trim()) {
-      newErrors.projectDescription = 'Project description is required';
-      isValid = false;
-    }
-
-    if (!formData.projectCategory) {
-      newErrors.projectCategory = 'Project category is required';
-      isValid = false;
-    }
-
-    if (teamMembers.some(member => !member.trim())) {
-      newErrors.teamMembers = 'All team members must be filled';
-      isValid = false;
-    }
-
-    setErrors(newErrors);
-    return isValid;
+    return true;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (validateForm()) {
-      // TODO: Implement submission logic
-      console.log('Form submitted:', { ...formData, teamMembers });
+    
+    console.log('🚀 Form submission attempt');
+    console.log('- user:', !!user);
+    
+    // Double-check authentication before submitting
+    if (!user) {
+      console.log('❌ Submit blocked - no user');
+      setShowAuthDialog(true);
+      return;
+    }
+    
+    if (!validateForm()) return;
+    
+    if (!hackathonId) {
+      setError('Invalid hackathon ID');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      console.log('Starting registration process...');
+      
+      // Step 1: Join the hackathon as a participant
+      console.log('Step 1: Joining hackathon...');
+      const joinResponse = await hackathonRegistrationAPI.joinHackathon({
+        userId: user.id,
+        hackathonId: parseInt(hackathonId),
+        role: 'PARTICIPANT'
+      });
+      console.log('Joined hackathon successfully:', joinResponse.data);
+
+      // Step 2: Create a team
+      console.log('Step 2: Creating team...');
+      const teamResponse = await hackathonRegistrationAPI.createTeam({
+        name: teamName.trim(),
+        userId: user.id,
+        hackathonId: parseInt(hackathonId)
+      });
+      console.log('Team created successfully:', teamResponse.data);
+
+      setSuccess(true);
+      
+      // Redirect to hackathon details page after 3 seconds
+      setTimeout(() => {
+        navigate(`/hackathons/${hackathonId}`);
+      }, 3000);
+
+    } catch (err: any) {
+      console.error('Registration failed:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Registration failed. Please try again.';
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleLoginRedirect = () => {
+    navigate('/login', { state: { returnTo: `/hackathons/${hackathonId}/register` } });
+  };
+
+  const handleSignUpRedirect = () => {
+    navigate('/register', { state: { returnTo: `/hackathons/${hackathonId}/register` } });
+  };
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    console.log('🔄 Showing auth loading state');
+    return (
+      <Container maxWidth="md" sx={{ mt: 8, mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
+          <CircularProgress size={40} />
+          <Typography variant="h6" sx={{ ml: 2 }}>
+            Checking authentication...
+          </Typography>
+        </Box>
+      </Container>
+    );
+  }
+
+  // Show authentication dialog for unauthenticated users
+  if (!user) {
+    console.log('🚫 Showing authentication required screen');
+    return (
+      <Container maxWidth="md" sx={{ mt: 8, mb: 4 }}>
+        <Card elevation={3}>
+          <CardContent sx={{ p: 4, textAlign: 'center' }}>
+            <LoginIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+            <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+              Authentication Required
+            </Typography>
+            <Typography variant="h6" color="textSecondary" sx={{ mb: 3 }}>
+              You need to be logged in to register for hackathons
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 4 }}>
+              Please sign in to your account or create a new one to join this hackathon and start building amazing projects!
+            </Typography>
+            
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                size="large"
+                onClick={handleLoginRedirect}
+                sx={{ px: 4, py: 1.5 }}
+              >
+                Sign In
+              </Button>
+              <Button
+                variant="outlined"
+                size="large"
+                onClick={handleSignUpRedirect}
+                sx={{ px: 4, py: 1.5 }}
+              >
+                Create Account
+              </Button>
+            </Box>
+            
+            <Box sx={{ mt: 3 }}>
+              <Button
+                variant="text"
+                onClick={() => navigate('/hackathons')}
+              >
+                ← Back to Hackathons
+              </Button>
+            </Box>
+          </CardContent>
+        </Card>
+      </Container>
+    );
+  }
+
+  if (success) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 8, mb: 4 }}>
+        <Card elevation={3}>
+          <CardContent sx={{ p: 4, textAlign: 'center' }}>
+            <CelebrationIcon sx={{ fontSize: 60, color: 'success.main', mb: 2 }} />
+            <Typography variant="h4" color="success.main" gutterBottom sx={{ fontWeight: 'bold' }}>
+              Registration Successful! 🎉
+            </Typography>
+            <Typography variant="h6" sx={{ mb: 2 }}>
+              Welcome to the hackathon, {user?.username || user?.email}!
+            </Typography>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Your team "<strong>{teamName}</strong>" has been created successfully.
+            </Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+              What would you like to do next?
+            </Typography>
+            <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <Button 
+                variant="contained" 
+                onClick={() => navigate(`/hackathons/${hackathonId}/submit-project`)}
+                sx={{ 
+                  px: 3, 
+                  py: 1.5,
+                  background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+                  '&:hover': {
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 15px rgba(25, 118, 210, 0.3)',
+                  }
+                }}
+              >
+                Submit Project Now
+              </Button>
+              <Button 
+                variant="outlined" 
+                onClick={() => navigate(`/hackathons/${hackathonId}`)}
+              >
+                View Hackathon Details
+              </Button>
+              <Button 
+                variant="text" 
+                onClick={() => navigate('/hackathons')}
+              >
+                Browse All Hackathons
+              </Button>
+            </Box>
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'info.50', borderRadius: 2 }}>
+              <Typography variant="body2" color="info.main">
+                💡 <strong>Next Step:</strong> Submit your project to participate in the hackathon evaluation!
+              </Typography>
+            </Box>
+          </CardContent>
+        </Card>
+      </Container>
+    );
+  }
+
+  console.log('✅ Showing registration form for authenticated user:', user?.email);
   return (
-    <Container maxWidth="md" sx={{ mt: 8, mb: 4 }}>
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4, 
-          backgroundColor: 'background.paper',
-          backdropFilter: 'blur(10px)',
-          border: '1px solid rgba(255, 255, 255, 0.1)'
-        }}
-      >
-        <Typography variant="h4" component="h1" gutterBottom align="center" sx={{ mb: 4 }}>
-          Register for Hackathon
+    <Container maxWidth="md" sx={{ mt: 4, mb: 6 }}>
+      {/* Header */}
+      <Box sx={{ textAlign: 'center', mb: 4 }}>
+        <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+          Join Hackathon
         </Typography>
+        <Typography variant="h6" color="textSecondary" sx={{ mb: 2 }}>
+          Welcome back, {user?.username || user?.email}! Register your team and start building amazing projects!
+        </Typography>
+        <Divider sx={{ maxWidth: 200, mx: 'auto' }} />
+      </Box>
 
-        <Box component="form" onSubmit={handleSubmit} noValidate>
-          <Grid container spacing={4}> {/* Main Grid Container */}
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
-            {/* Team Information */}
-            <Grid xs={12}> 
-              <Typography variant="h6" gutterBottom>
-                Team Information
-              </Typography>
-              <Grid container spacing={2}> {/* Nested Grid for Team */}
-                <Grid xs={12}> 
-                  <TextField
-                    required
-                    fullWidth
-                    label="Team Name"
-                    name="teamName"
-                    value={formData.teamName}
-                    onChange={handleChange}
-                    error={!!errors.teamName}
-                    helperText={errors.teamName}
-                  />
-                </Grid>
-                <Grid xs={12}> 
-                  <Typography variant="subtitle1" gutterBottom>
-                    Team Members
-                  </Typography>
-                  {teamMembers.map((member, index) => (
-                    <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                      <TextField
-                        required
-                        fullWidth
-                        label={`Team Member ${index + 1}`}
-                        value={member}
-                        onChange={(e) => handleTeamMemberChange(index, e.target.value)}
-                        error={!!errors.teamMembers}
-                        helperText={index === 0 ? errors.teamMembers : ''}
-                      />
-                      {index > 0 && (
-                        <IconButton 
-                          onClick={() => removeTeamMember(index)}
-                          color="error"
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      )}
-                    </Box>
-                  ))}
-                  <Button
-                    startIcon={<AddIcon />}
-                    onClick={addTeamMember}
-                    sx={{ mt: 1 }}
-                  >
-                    Add Team Member
-                  </Button>
-                </Grid>
-              </Grid>
-            </Grid>
+      <Card elevation={2}>
+        <CardContent sx={{ p: 4 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+            <GroupIcon sx={{ mr: 2, color: 'primary.main', fontSize: 30 }} />
+            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+              Create Your Team
+            </Typography>
+          </Box>
 
-            {/* Project Information */}
-            <Grid xs={12}> 
-              <Typography variant="h6" gutterBottom>
-                Project Information
-              </Typography>
-              <Grid container spacing={2}> {/* Nested Grid for Project */}
-                <Grid xs={12}> 
-                  <TextField
-                    required
-                    fullWidth
-                    label="Project Name"
-                    name="projectName"
-                    value={formData.projectName}
-                    onChange={handleChange}
-                    error={!!errors.projectName}
-                    helperText={errors.projectName}
-                  />
-                </Grid>
-                <Grid xs={12}> 
-                  <TextField
-                    required
-                    fullWidth
-                    multiline
-                    rows={4}
-                    label="Project Description"
-                    name="projectDescription"
-                    value={formData.projectDescription}
-                    onChange={handleChange}
-                    error={!!errors.projectDescription}
-                    helperText={errors.projectDescription}
-                  />
-                </Grid>
-                <Grid xs={12} sm={6}> {/* Split category and links */} 
-                  <FormControl fullWidth required error={!!errors.projectCategory}>
-                    <InputLabel>Project Category</InputLabel>
-                    <Select
-                      name="projectCategory"
-                      value={formData.projectCategory}
-                      onChange={handleSelectChange}
-                      label="Project Category"
-                    >
-                      <MenuItem value="web">Web Development</MenuItem>
-                      <MenuItem value="mobile">Mobile Development</MenuItem>
-                      <MenuItem value="ai">AI/ML</MenuItem>
-                      <MenuItem value="blockchain">Blockchain</MenuItem>
-                      <MenuItem value="iot">IoT</MenuItem>
-                      <MenuItem value="other">Other</MenuItem>
-                    </Select>
-                  </FormControl>
-                </Grid>
-                 <Grid xs={12} sm={6}> {/* GitHub Link */} 
-                  <TextField
-                    fullWidth
-                    label="GitHub Repository Link"
-                    name="githubLink"
-                    value={formData.githubLink}
-                    onChange={handleChange}
-                  />
-                </Grid>
-                <Grid xs={12}> {/* Demo Link */} 
-                  <TextField
-                    fullWidth
-                    label="Demo Video Link"
-                    name="demoLink"
-                    value={formData.demoLink}
-                    onChange={handleChange}
-                  />
-                </Grid>
-                <Grid xs={12}> 
-                  <Box sx={{ mb: 2 }}>
-                    <Typography variant="subtitle1" gutterBottom>
-                      Technologies Used
-                    </Typography>
-                    <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
-                      <TextField
-                        fullWidth
-                        label="Add Technology"
-                        value={newTechnology}
-                        onChange={(e) => setNewTechnology(e.target.value)}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter') {
-                            e.preventDefault();
-                            handleAddTechnology();
-                          }
-                        }}
-                      />
-                      <Button
-                        variant="contained"
-                        onClick={handleAddTechnology}
-                        sx={{ minWidth: '100px' }}
-                      >
-                        Add
-                      </Button>
-                    </Box>
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                      {formData.technologies.map((tech) => (
-                        <Chip
-                          key={tech}
-                          label={tech}
-                          onDelete={() => handleRemoveTechnology(tech)}
-                        />
-                      ))}
-                    </Box>
-                  </Box>
-                </Grid>
-              </Grid>
-            </Grid>
+          <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
+            You'll be automatically registered as a participant in this hackathon. 
+            Choose a creative name for your team to get started!
+          </Typography>
 
-            <Grid xs={12}> {/* Submit Button */}
+          <Box component="form" onSubmit={handleSubmit} noValidate>
+            <TextField
+              required
+              fullWidth
+              label="Team Name"
+              value={teamName}
+              onChange={handleTeamNameChange}
+              error={!!teamNameError}
+              helperText={teamNameError || "This will be your team's identity throughout the hackathon"}
+              placeholder="Enter a creative team name..."
+              sx={{ mb: 4 }}
+              disabled={loading}
+              autoFocus
+            />
+
+            <Box sx={{ textAlign: 'center' }}>
               <Button
                 type="submit"
                 variant="contained"
                 size="large"
-                fullWidth
+                disabled={loading || !teamName.trim()}
                 sx={{
-                  mt: 2,
+                  px: 6,
                   py: 1.5,
-                  transition: 'all 0.2s ease-in-out',
+                  fontSize: '1.1rem',
+                  fontWeight: 'bold',
+                  borderRadius: 3,
+                  background: 'linear-gradient(45deg, #1976d2 30%, #42a5f5 90%)',
+                  transition: 'all 0.3s ease-in-out',
                   '&:hover': {
                     transform: 'translateY(-2px)',
-                    boxShadow: '0 4px 12px rgba(37, 99, 235, 0.2)',
+                    boxShadow: '0 8px 25px rgba(25, 118, 210, 0.3)',
                   },
+                  '&:disabled': {
+                    background: 'grey.300',
+                    transform: 'none',
+                  }
                 }}
               >
-                Submit Registration
+                {loading ? (
+                  <>
+                    <CircularProgress size={20} sx={{ mr: 1, color: 'white' }} />
+                    Registering...
+                  </>
+                ) : (
+                  'Join Hackathon & Create Team'
+                )}
               </Button>
-            </Grid>
-          </Grid> {/* End Main Grid Container */}
-        </Box>
-      </Paper>
+            </Box>
+          </Box>
+
+          <Box sx={{ mt: 4, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
+            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+              📋 What happens next?
+            </Typography>
+            <Typography variant="body2" color="textSecondary" component="div">
+              <Box component="ul" sx={{ pl: 2, m: 0 }}>
+                <li>You'll be registered as a participant in this hackathon</li>
+                <li>Your team will be created with you as the team leader</li>
+                <li>You can invite team members later from the team dashboard</li>
+                <li>You can update project details when submitting your work</li>
+              </Box>
+            </Typography>
+          </Box>
+        </CardContent>
+      </Card>
     </Container>
   );
 };

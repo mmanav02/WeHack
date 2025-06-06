@@ -1,5 +1,5 @@
 import { Box, Typography, TextField, Button, Stack, Container, Link } from '@mui/material'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -9,6 +9,10 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const { login, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get the return URL from state or default to home page
+  const returnTo = location.state?.returnTo || '/';
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -19,7 +23,7 @@ const LoginPage = () => {
       const success = await login(email, password);
       if (success) {
         console.log('Login successful');
-        navigate('/hackathons'); // Redirect to hackathons page after successful login
+        navigate(returnTo); // Redirect to the return URL (home by default)
       } else {
         setError('Login failed. Please check your credentials.');
       }
@@ -34,6 +38,16 @@ const LoginPage = () => {
       <Typography variant="h4" component="h1" align="center" gutterBottom>
         Login
       </Typography>
+      
+      {/* Show message if user was redirected from registration */}
+      {location.state?.returnTo && location.state.returnTo.includes('/register') && (
+        <Box sx={{ mb: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+          <Typography variant="body2" color="info.contrastText" align="center">
+            Please log in to continue with your hackathon registration
+          </Typography>
+        </Box>
+      )}
+      
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={3}>
           <TextField
@@ -75,7 +89,7 @@ const LoginPage = () => {
       </Box>
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Typography variant="body2">
-          Don't have an account? <Link component={RouterLink} to="/register" variant="body2" color="primary">Sign Up</Link>
+          Don't have an account? <Link component={RouterLink} to="/register" state={{ returnTo }} variant="body2" color="primary">Sign Up</Link>
         </Typography>
       </Box>
     </Container>

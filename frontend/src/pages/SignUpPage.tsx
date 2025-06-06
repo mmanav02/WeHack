@@ -1,5 +1,5 @@
 import { Box, Typography, TextField, Button, Stack, Container, Link } from '@mui/material'
-import { Link as RouterLink, useNavigate } from 'react-router-dom'
+import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -12,6 +12,10 @@ const SignUpPage = () => {
   const [success, setSuccess] = useState('');
   const { register, loading } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Get the return URL from state or default to home page
+  const returnTo = location.state?.returnTo || '/';
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -25,10 +29,14 @@ const SignUpPage = () => {
     }
 
     try {
-      const success = await register({ name, email, password });
+      const success = await register({ 
+        username: name,
+        email, 
+        password 
+      });
       if (success) {
         setSuccess('Registration successful!');
-        navigate('/hackathons'); // Redirect after successful registration
+        navigate(returnTo); // Redirect to the return URL (home by default)
       } else {
         setError('Registration failed. Please try again.');
       }
@@ -43,6 +51,16 @@ const SignUpPage = () => {
       <Typography variant="h4" component="h1" align="center" gutterBottom>
         Sign Up
       </Typography>
+      
+      {/* Show message if user was redirected from registration */}
+      {location.state?.returnTo && location.state.returnTo.includes('/register') && (
+        <Box sx={{ mb: 3, p: 2, bgcolor: 'info.light', borderRadius: 1 }}>
+          <Typography variant="body2" color="info.contrastText" align="center">
+            Create an account to continue with your hackathon registration
+          </Typography>
+        </Box>
+      )}
+      
       <Box component="form" onSubmit={handleSubmit}>
         <Stack spacing={3}>
           <TextField
@@ -55,6 +73,7 @@ const SignUpPage = () => {
             variant="outlined"
             value={name}
             onChange={(e) => setName(e.target.value)}
+            error={!!error && !name}
           />
           <TextField
             required
@@ -66,6 +85,7 @@ const SignUpPage = () => {
             variant="outlined"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            error={!!error && !email}
           />
           <TextField
             required
@@ -78,23 +98,23 @@ const SignUpPage = () => {
             variant="outlined"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            error={!!error && !password}
           />
           <TextField
             required
             fullWidth
-            id="confirm-password"
+            id="confirmPassword"
             label="Confirm Password"
-            name="confirm-password"
+            name="confirmPassword"
             type="password"
             autoComplete="new-password"
             variant="outlined"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            error={!!error && password !== confirmPassword}
-            helperText={error && password !== confirmPassword ? error : ''}
+            error={!!error}
           />
-          {error && password === confirmPassword && <Typography color="error">{error}</Typography>}
-          {success && <Typography color="success.main">{success}</Typography>}
+          {error && <Typography color="error" align="center">{error}</Typography>}
+          {success && <Typography color="success.main" align="center">{success}</Typography>}
           <Button 
             type="submit" 
             fullWidth 
@@ -108,7 +128,7 @@ const SignUpPage = () => {
       </Box>
       <Box sx={{ mt: 3, textAlign: 'center' }}>
         <Typography variant="body2">
-          Already have an account? <Link component={RouterLink} to="/login" variant="body2" color="primary">Log In</Link>
+          Already have an account? <Link component={RouterLink} to="/login" state={{ returnTo }} variant="body2" color="primary">Sign In</Link>
         </Typography>
       </Box>
     </Container>

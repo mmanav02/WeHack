@@ -79,10 +79,14 @@ public class SubmissionController {
         return ResponseEntity.ok(submissionService.listSubmissions(request.getHackathon(), request.getTeam()));
     }
 
-    @PostMapping("/undoSubmission")
-    public Submission undoSubmission(
-            @RequestBody UndoSubmitProjectRequest request
-            ) {
+    @GetMapping("/hackathon/{hackathonId}")
+    public ResponseEntity<List<Submission>> getSubmissionsByHackathon(@PathVariable int hackathonId) {
+        List<Submission> submissions = submissionService.findByHackathonId(hackathonId);
+        return ResponseEntity.ok(submissions);
+    }
+
+    @PostMapping("/undoLastEdit")
+    public Submission undoLastEdit(@RequestBody UndoSubmitProjectRequest request) {
         return submissionService.undoLastEdit(request.getTeamId(), request.getSubmissionId(), request.getHackathonId());
     }
 
