@@ -12,7 +12,7 @@ public final class HackathonMapper {
                 .id(hackathon.getId())
                 .title(hackathon.getTitle())
                 .description(hackathon.getDescription())
-                .date(hackathon.getDate())
+                .date(hackathon.getStartDate() != null ? hackathon.getStartDate().toString() : null)
                 .status(hackathon.getStatus())
                 .organizerId(hackathon.getOrganizer() != null ? 
                            (long) hackathon.getOrganizer().getId() : null)
