@@ -19,7 +19,10 @@ import {
   Group as TeamIcon,
   Code as CodeIcon,
   Gavel as JudgeIcon,
-  Comment as CommentIcon
+  Comment as CommentIcon,
+  Download as DownloadIcon,
+  Link as LinkIcon,
+  AttachFile as FileIcon
 } from '@mui/icons-material';
 import { submissionAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -36,6 +39,7 @@ interface Submission {
   submittedAt?: string;
   hackathonId?: number;
   hackathonName?: string;
+  filePath?: string;  // Add file path support
   // Add more fields as needed
 }
 
@@ -74,7 +78,8 @@ const SubmissionDetailsPage: React.FC = () => {
           technology: submissionData.technology || [], // This field might not exist in backend yet
           submittedAt: submissionData.submitTime,
           hackathonId: submissionData.hackathon?.id,
-          hackathonName: submissionData.hackathon?.title || 'Unknown Hackathon'
+          hackathonName: submissionData.hackathon?.title || 'Unknown Hackathon',
+          filePath: submissionData.filePath
         };
         
         setSubmission(submission);
@@ -97,6 +102,46 @@ const SubmissionDetailsPage: React.FC = () => {
 
   const handleJudgeSubmission = () => {
     navigate(`/submissions/${submissionId}/score`);
+  };
+
+  const handleDownloadFile = async () => {
+    if (!submission || !submission.filePath) return;
+
+    try {
+      const response = await submissionAPI.downloadFile(submission.id);
+      
+      // Create a blob from the response
+      const blob = new Blob([response.data]);
+      
+      // Create a temporary URL for the blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Create a temporary anchor element and trigger download
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extract filename from filePath if available
+      const filename = submission.filePath.includes('/') 
+        ? submission.filePath.split('/').pop() || 'submission_file'
+        : submission.filePath;
+      
+      // Remove timestamp prefix if it exists (format: timestamp_originalname)
+      const cleanFilename = filename.includes('_') 
+        ? filename.substring(filename.indexOf('_') + 1)
+        : filename;
+        
+      link.download = cleanFilename;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+    } catch (err: any) {
+      console.error('Failed to download file:', err);
+      setError('Failed to download file. Please try again.');
+    }
   };
 
   if (loading) {
@@ -207,13 +252,16 @@ const SubmissionDetailsPage: React.FC = () => {
             </Card>
           )}
 
-          {/* Project Links */}
-          {(submission.projectUrl || submission.repoUrl) && (
+          {/* Project Links and Files */}
+          {(submission.projectUrl || submission.repoUrl || submission.filePath) && (
             <Card elevation={2} sx={{ mb: 3 }}>
               <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
-                  Project Links
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <LinkIcon sx={{ mr: 2, color: 'primary.main' }} />
+                  <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    Project Resources
+                  </Typography>
+                </Box>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   {submission.projectUrl && (
                     <Button
@@ -221,9 +269,10 @@ const SubmissionDetailsPage: React.FC = () => {
                       href={submission.projectUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      startIcon={<LinkIcon />}
                       sx={{ justifyContent: 'flex-start' }}
                     >
-                      🌐 Live Demo
+                      🔗 Project Link
                     </Button>
                   )}
                   {submission.repoUrl && (
@@ -232,12 +281,41 @@ const SubmissionDetailsPage: React.FC = () => {
                       href={submission.repoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
+                      startIcon={<CodeIcon />}
                       sx={{ justifyContent: 'flex-start' }}
                     >
-                      📁 Source Code
+                      📁 Source Code Repository
+                    </Button>
+                  )}
+                  {submission.filePath && (
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      onClick={handleDownloadFile}
+                      startIcon={<DownloadIcon />}
+                      sx={{ justifyContent: 'flex-start' }}
+                    >
+                      📎 Download Submitted Files
                     </Button>
                   )}
                 </Box>
+                
+                {/* File Info */}
+                {submission.filePath && (
+                  <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
+                    <Typography variant="body2" color="textSecondary" sx={{ display: 'flex', alignItems: 'center' }}>
+                      <FileIcon sx={{ mr: 1, fontSize: 16 }} />
+                      <strong>Submitted File:</strong>&nbsp;
+                      {submission.filePath.includes('/') 
+                        ? submission.filePath.split('/').pop()?.replace(/^\d+_/, '') || 'Unknown file'
+                        : submission.filePath.replace(/^\d+_/, '')
+                      }
+                    </Typography>
+                    <Typography variant="caption" color="textSecondary" sx={{ mt: 0.5, display: 'block' }}>
+                      💡 Click "Download Submitted Files" above to access the team's submission files
+                    </Typography>
+                  </Box>
+                )}
               </CardContent>
             </Card>
           )}

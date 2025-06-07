@@ -30,4 +30,10 @@ public class UserServiceImpl implements UserService {
         }
         throw new RuntimeException("Invalid credentials");
     }
+
+    @Override
+    public User findByEmail(String email) {
+        Optional<User> user = userRepository.findByEmail(email);
+        return user.orElse(null);
+    }
 }

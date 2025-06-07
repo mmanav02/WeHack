@@ -363,6 +363,21 @@ const HackathonRegistrationPage = () => {
               </Box>
             </Typography>
           </Box>
+
+          {/* Alternative Option */}
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              Already have teammates? Want to join an existing team?
+            </Typography>
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={() => navigate(`/hackathons/${hackathonId}/browse-teams`)}
+              sx={{ px: 4 }}
+            >
+              Browse Existing Teams
+            </Button>
+          </Box>
         </CardContent>
       </Card>
     </Container>

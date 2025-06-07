@@ -21,6 +21,7 @@ export const testAPI = {
 export const authAPI = {
     register: (userData: any) => api.post('/auth/register', userData),
     login: (userData: any) => api.post('/auth/login', userData),
+    findUserByEmail: (email: string) => api.get(`/auth/user/find-by-email?email=${encodeURIComponent(email)}`),
 };
 
 // Hackathon APIs
@@ -48,9 +49,12 @@ export const hackathonRegistrationAPI = {
         api.get(`/hackathon-role/hackathons/${hackathonId}/judge-requests`),
     getParticipants: (hackathonId: number) => 
         api.get(`/hackathon-role/hackathons/${hackathonId}/participants`),
-    // TODO: Backend GET /hackathon-role/iterator has issues (GET with @RequestBody)
-    // listTeams: (requestData: { team?: any; hackathon: any }) => 
-    //     api.get('/hackathon-role/iterator', { data: requestData }),
+    listTeams: (hackathonId: number) => 
+        api.get(`/hackathon-role/hackathons/${hackathonId}/teams`),
+    getAvailableTeams: (hackathonId: number) => 
+        api.get(`/hackathon-role/hackathons/${hackathonId}/available-teams`),
+    requestToJoinTeam: (teamId: number, userId: number) => 
+        api.post(`/hackathon-role/teams/${teamId}/join-request`, userId),
     updateJudgeStatus: (statusData: { hackathonId: number; userId: number; status: string }) => 
         api.post('/hackathon-role/update-status', statusData),
 };
@@ -74,9 +78,10 @@ export const submissionAPI = {
         }),
     getByHackathon: (hackathonId: number) => api.get(`/submissions/hackathon/${hackathonId}`),
     getByUser: (userId: number) => api.get(`/submissions/user/${userId}`),
-    // TODO: Backend doesn't have these endpoints yet - using mock data instead
-    // getById: (submissionId: number) => api.get(`/submissions/${submissionId}`),
     getById: (submissionId: number) => api.get(`/submissions/${submissionId}`),
+    downloadFile: (submissionId: number) => api.get(`/submissions/${submissionId}/download`, {
+        responseType: 'blob'  // Important for file downloads
+    }),
 };
 
 // Comment APIs

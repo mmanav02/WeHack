@@ -82,6 +82,32 @@ const StateConnector = styled(StepConnector)(({ theme }) => ({
   },
 }));
 
+// Utility function to safely display date
+const formatDisplayDate = (dateString: string | null | undefined): string => {
+  if (!dateString) return 'Date not set';
+  
+  // If it's already in DD-MM-YYYY format or contains "to" (date range), return as is
+  if (/^\d{2}-\d{2}-\d{4}/.test(dateString) || dateString.includes(' to ')) {
+    return dateString;
+  }
+  
+  // Try to parse and format the date
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) {
+      return 'Invalid date';
+    }
+    
+    // Format as DD-MM-YYYY
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
+  } catch (error) {
+    return 'Date not available';
+  }
+};
+
 const HackathonDetailsPage: React.FC = () => {
   const { hackathonId } = useParams<{ hackathonId: string }>();
   const navigate = useNavigate();
@@ -113,6 +139,16 @@ const HackathonDetailsPage: React.FC = () => {
       checkJudgeStatus();
     }
   }, [hackathonId, user]);
+
+  // Update participant count when participants list changes
+  useEffect(() => {
+    if (hackathon && hackathon.participantsCount !== participants.length) {
+      setHackathon(prev => prev ? {
+        ...prev,
+        participantsCount: participants.length
+      } : null);
+    }
+  }, [participants.length]);
 
   const fetchHackathon = async () => {
     try {
@@ -180,15 +216,6 @@ const HackathonDetailsPage: React.FC = () => {
       setParticipants(realParticipants);
       
       console.log(`✅ Found ${realParticipants.length} participants`);
-      
-      // Update hackathon statistics with real data
-      if (hackathon) {
-        setHackathon(prev => prev ? {
-          ...prev,
-          participantsCount: realParticipants.length,
-          judgesCount: 0 // We don't show judges here anymore
-        } : null);
-      }
       
     } catch (err) {
       console.error('Failed to fetch participants:', err);
@@ -408,7 +435,7 @@ const HackathonDetailsPage: React.FC = () => {
               </Typography>
               <Typography variant="body2" color="text.secondary">
                 <EventIcon sx={{ fontSize: 16, mr: 1, verticalAlign: 'middle' }} />
-                Date: {new Date(hackathon.date).toLocaleDateString()}
+                Date: {formatDisplayDate(hackathon.date)}
               </Typography>
             </Box>
 
@@ -510,71 +537,124 @@ const HackathonDetailsPage: React.FC = () => {
 
             {/* Action Buttons */}
             <Box sx={{ mb: 3 }}>
-              <Stack direction="row" spacing={2} flexWrap="wrap">
+              <Typography variant="h6" gutterBottom>
+                Actions
+              </Typography>
+              <Grid container spacing={2}>
                 {/* Judge Request/Management Button */}
                 {(hackathon.status === 'Published' || hackathon.status === 'Judging') && (
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    startIcon={<JudgeIcon />}
-                    onClick={handleJudgeRequest}
-                  >
-                    {isOrganizer() ? 'Manage Judges' : 'Judge Req'}
-                  </Button>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Button
+                      variant="contained"
+                      color="primary"
+                      startIcon={<JudgeIcon />}
+                      onClick={handleJudgeRequest}
+                      fullWidth
+                      sx={{ height: 48 }}
+                    >
+                      {isOrganizer() ? 'Manage Judges' : 'Judge Req'}
+                    </Button>
+                  </Grid>
+                )}
+                
+                {/* Team Management Button - Only for organizers */}
+                {isOrganizer() && (hackathon.status === 'Published' || hackathon.status === 'Judging' || hackathon.status === 'Completed') && (
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Button
+                      variant="outlined"
+                      color="primary"
+                      startIcon={<TeamIcon />}
+                      onClick={() => navigate(`/hackathons/${hackathonId}/team-management`)}
+                      fullWidth
+                      sx={{ height: 48 }}
+                    >
+                      Manage Teams
+                    </Button>
+                  </Grid>
                 )}
                 
                 {/* Judge Submissions Button - Only for approved judges in Judging state */}
                 {isApprovedJudge && hackathon.status === 'Judging' && (
-                  <Button
-                    variant="contained"
-                    color="secondary"
-                    startIcon={<JudgeIcon />}
-                    onClick={() => navigate('/submissions')}
-                  >
-                    Judge Submissions
-                  </Button>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Button
+                      variant="contained"
+                      color="secondary"
+                      startIcon={<JudgeIcon />}
+                      onClick={() => navigate('/submissions')}
+                      fullWidth
+                      sx={{ height: 48 }}
+                    >
+                      Judge Submissions
+                    </Button>
+                  </Grid>
                 )}
                 
                 {/* Registration & Project Submission - Only for non-organizers in Published state */}
                 {!isOrganizer() && hackathon.status === 'Published' && (
                   <>
-                    <Button
-                      variant="contained"
-                      color="success"
-                      startIcon={<AddIcon />}
-                      onClick={handleSubmit}
-                    >
-                      Register Team
-                    </Button>
-                    <Button
-                      variant="outlined"
-                      color="primary"
-                      startIcon={<SubmissionIcon />}
-                      onClick={() => navigate(`/hackathons/${hackathonId}/submit-project`)}
-                    >
-                      Submit Project
-                    </Button>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Button
+                        variant="contained"
+                        color="success"
+                        startIcon={<AddIcon />}
+                        onClick={handleSubmit}
+                        fullWidth
+                        sx={{ height: 48 }}
+                      >
+                        Register Team
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<TeamIcon />}
+                        onClick={() => navigate(`/hackathons/${hackathonId}/browse-teams`)}
+                        fullWidth
+                        sx={{ height: 48 }}
+                      >
+                        Browse Teams
+                      </Button>
+                    </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Button
+                        variant="outlined"
+                        color="primary"
+                        startIcon={<SubmissionIcon />}
+                        onClick={() => navigate(`/hackathons/${hackathonId}/submit-project`)}
+                        fullWidth
+                        sx={{ height: 48 }}
+                      >
+                        Submit Project
+                      </Button>
+                    </Grid>
                   </>
                 )}
                 
                 {/* Leaderboard Button - Visible in Judging and Completed states */}
                 {(hackathon.status === 'Judging' || hackathon.status === 'Completed') && (
-                  <Button
-                    variant="outlined"
-                    startIcon={<LeaderboardIcon />}
-                    onClick={() => navigate(`/hackathons/${hackathonId}/leaderboard`)}
-                  >
-                    View Leaderboard
-                  </Button>
+                  <Grid item xs={12} sm={6} md={4}>
+                    <Button
+                      variant="outlined"
+                      startIcon={<LeaderboardIcon />}
+                      onClick={() => navigate(`/hackathons/${hackathonId}/leaderboard`)}
+                      fullWidth
+                      sx={{ height: 48 }}
+                    >
+                      View Leaderboard
+                    </Button>
+                  </Grid>
                 )}
 
                 {/* Draft state - Only show to organizers */}
                 {hackathon.status === 'Draft' && isOrganizer() && (
-                  <Alert severity="info" sx={{ mt: 1 }}>
-                    🔒 Publish your hackathon to make it visible to participants
-                  </Alert>
+                  <Grid item xs={12}>
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      🔒 Publish your hackathon to make it visible to participants
+                    </Alert>
+                  </Grid>
                 )}
-              </Stack>
+              </Grid>
             </Box>
           </Paper>
         </Grid>

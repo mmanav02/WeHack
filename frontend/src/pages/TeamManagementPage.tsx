@@ -31,7 +31,7 @@ import {
   Edit as EditIcon,
   Group as GroupIcon
 } from '@mui/icons-material';
-import { hackathonRegistrationAPI } from '../services/api';
+import { hackathonRegistrationAPI, authAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Team {
@@ -57,6 +57,7 @@ const TeamManagementPage = () => {
   const [loading, setLoading] = useState(true);
   const [teams, setTeams] = useState<Team[]>([]);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
   const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
   const [newMemberEmail, setNewMemberEmail] = useState('');
@@ -71,56 +72,19 @@ const TeamManagementPage = () => {
   const fetchTeams = async () => {
     try {
       setLoading(true);
-      // Backend GET /hackathon-role/iterator has issues (GET with @RequestBody)
-      // Using mock data for demonstration until backend is fixed
+      setError('');
       
-      const mockTeams: Team[] = [
-        {
-          id: 1,
-          name: "AI Innovators",
-          hackathonId: parseInt(hackathonId!),
-          members: [
-            { id: 1, username: "alice_dev", email: "alice@example.com", role: "Team Lead" },
-            { id: 2, username: "bob_ai", email: "bob@example.com", role: "AI Specialist" },
-            { id: 3, username: "charlie_ui", email: "charlie@example.com", role: "UI Designer" }
-          ],
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 2,
-          name: "Blockchain Builders",
-          hackathonId: parseInt(hackathonId!),
-          members: [
-            { id: 4, username: "diana_block", email: "diana@example.com", role: "Blockchain Dev" },
-            { id: 5, username: "eve_smart", email: "eve@example.com", role: "Smart Contracts" }
-          ],
-          createdAt: new Date().toISOString()
-        },
-        {
-          id: 3,
-          name: "IoT Solutions",
-          hackathonId: parseInt(hackathonId!),
-          members: [
-            { id: 6, username: "frank_iot", email: "frank@example.com", role: "IoT Engineer" },
-            { id: 7, username: "grace_hw", email: "grace@example.com", role: "Hardware Dev" },
-            { id: 8, username: "henry_data", email: "henry@example.com", role: "Data Scientist" },
-            { id: 9, username: "iris_mobile", email: "iris@example.com", role: "Mobile Dev" }
-          ],
-          createdAt: new Date().toISOString()
-        }
-      ];
+      console.log(`🔍 Fetching teams for hackathon ${hackathonId}`);
+      const response = await hackathonRegistrationAPI.listTeams(parseInt(hackathonId!));
+      const teamsData = response.data || [];
       
-      setTeams(mockTeams);
+      console.log(`✅ Found ${teamsData.length} teams:`, teamsData);
+      setTeams(teamsData);
       
-      // TODO: Fix backend endpoint (GET request shouldn't have @RequestBody)
-      // const response = await hackathonRegistrationAPI.listTeams({
-      //   team: null,
-      //   hackathon: { id: parseInt(hackathonId!) }
-      // });
-      // setTeams(response.data);
     } catch (err: any) {
       console.error('Failed to fetch teams:', err);
       setError('Failed to load teams. Please try again.');
+      setTeams([]); // Fallback to empty list
     } finally {
       setLoading(false);
     }
@@ -133,21 +97,47 @@ const TeamManagementPage = () => {
 
     try {
       setAddingMember(true);
-      // Note: This would typically require a user lookup by email first
-      // For demo purposes, we'll assume the backend handles email-to-userId conversion
-      // In a real implementation, you'd need an endpoint to find user by email
+      setError('');
       
-      // For now, we'll show a placeholder implementation
-      console.log('Adding member:', newMemberEmail, 'to team:', selectedTeam.id);
+      console.log('Looking up user by email:', newMemberEmail);
       
-      // await hackathonRegistrationAPI.addTeamMember(selectedTeam.id, userId);
+      // Step 1: Find user by email
+      const userResponse = await authAPI.findUserByEmail(newMemberEmail.trim());
       
+      if (!userResponse.data) {
+        setError('User not found with that email address. Please check the email and try again.');
+        return;
+      }
+      
+      const foundUser = userResponse.data;
+      console.log('Found user:', foundUser);
+      
+      // Step 2: Add user to team
+      console.log('Adding user', foundUser.id, 'to team:', selectedTeam.id);
+      await hackathonRegistrationAPI.addTeamMember(selectedTeam.id, foundUser.id);
+      
+      console.log('✅ Successfully added member to team');
+      
+      // Step 3: Clear form and refresh teams
       setNewMemberEmail('');
       setShowAddMemberDialog(false);
-      await fetchTeams(); // Refresh teams
+      
+      // Show success message
+      setSuccess(`✅ Successfully added ${foundUser.username || foundUser.email} to ${selectedTeam.name}!`);
+      
+      // Refresh teams to show updated member list
+      await fetchTeams();
+      
+      // Clear success message after 5 seconds
+      setTimeout(() => setSuccess(''), 5000);
+      
     } catch (err: any) {
       console.error('Failed to add team member:', err);
-      setError('Failed to add team member. Please try again.');
+      if (err.response?.status === 404) {
+        setError('User not found with that email address. Please check the email and try again.');
+      } else {
+        setError('Failed to add team member. The user may already be in a team or an error occurred.');
+      }
     } finally {
       setAddingMember(false);
     }
@@ -196,6 +186,12 @@ const TeamManagementPage = () => {
         </Alert>
       )}
 
+      {success && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
+          {success}
+        </Alert>
+      )}
+
       {/* Teams Overview */}
       <Card sx={{ mb: 3 }} elevation={2}>
         <CardContent>
@@ -216,7 +212,7 @@ const TeamManagementPage = () => {
             <Grid item xs={12} sm={4}>
               <Box sx={{ textAlign: 'center', p: 2 }}>
                 <Typography variant="h3" color="success.main" sx={{ fontWeight: 'bold' }}>
-                  {teams.reduce((acc, team) => acc + team.members.length, 0)}
+                  {teams.reduce((acc, team) => acc + (team.members?.length || 0), 0)}
                 </Typography>
                 <Typography variant="body1" color="textSecondary">
                   Total Participants
@@ -226,7 +222,7 @@ const TeamManagementPage = () => {
             <Grid item xs={12} sm={4}>
               <Box sx={{ textAlign: 'center', p: 2 }}>
                 <Typography variant="h3" color="warning.main" sx={{ fontWeight: 'bold' }}>
-                  {Math.round(teams.reduce((acc, team) => acc + team.members.length, 0) / teams.length || 0)}
+                  {Math.round(teams.reduce((acc, team) => acc + (team.members?.length || 0), 0) / teams.length || 0)}
                 </Typography>
                 <Typography variant="body1" color="textSecondary">
                   Avg Team Size
@@ -273,7 +269,7 @@ const TeamManagementPage = () => {
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                     <Chip 
-                      label={`${team.members.length} member${team.members.length !== 1 ? 's' : ''}`}
+                      label={`${team.members?.length || 0} member${(team.members?.length || 0) !== 1 ? 's' : ''}`}
                       size="small"
                       color="primary"
                       variant="outlined"
@@ -284,7 +280,7 @@ const TeamManagementPage = () => {
                     Team Members:
                   </Typography>
                   <List dense sx={{ pt: 0 }}>
-                    {team.members.map((member) => (
+                    {(team.members || []).map((member) => (
                       <ListItem key={member.id} sx={{ px: 0, py: 0.5 }}>
                         <ListItemAvatar>
                           <Avatar sx={{ width: 24, height: 24, fontSize: '0.8rem' }}>
@@ -343,9 +339,19 @@ const TeamManagementPage = () => {
             onChange={(e) => setNewMemberEmail(e.target.value)}
             placeholder="Enter the email of the user to add"
             sx={{ mt: 2 }}
+            error={!!error && error.includes('email')}
+            helperText={error && error.includes('email') ? error : ''}
           />
           <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
-            Note: The user must have an account on the platform to be added to the team.
+            💡 <strong>How it works:</strong>
+          </Typography>
+          <Typography variant="body2" color="textSecondary" component="div" sx={{ mt: 1 }}>
+            <Box component="ul" sx={{ pl: 2, m: 0 }}>
+              <li>Enter the email of a registered user</li>
+              <li>They will be added to the team immediately</li>
+              <li>The user must have an account on the platform</li>
+              <li>Users can only be in one team per hackathon</li>
+            </Box>
           </Typography>
         </DialogContent>
         <DialogActions>

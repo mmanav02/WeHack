@@ -88,11 +88,21 @@ const HackathonList: React.FC<HackathonListProps> = ({ limit, showActionsOnly = 
     };
 
     const formatDate = (dateString: string) => {
-        return new Date(dateString).toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
+        // If the date is already in DD-MM-YYYY format or contains "to" (date range), return as is
+        if (/^\d{2}-\d{2}-\d{4}/.test(dateString) || dateString.includes(' to ')) {
+            return dateString;
+        }
+        
+        // Fallback for other date formats
+        try {
+            return new Date(dateString).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (error) {
+            return dateString; // Return original if parsing fails
+        }
     };
 
     const getStatusColor = (status?: string) => {

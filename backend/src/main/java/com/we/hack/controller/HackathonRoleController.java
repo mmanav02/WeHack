@@ -66,11 +66,32 @@ public class HackathonRoleController {
         return teamService.addMemberToTeam(teamId, userId);
     }
 
-    @GetMapping("/iterator")
-    public ResponseEntity<List<TeamDto>> listTeams(@RequestBody getSubmissionRequest request) {
-        return ResponseEntity.ok(hackathonService.listTeams(request.getHackathon()));
+    @GetMapping("/hackathons/{hackathonId}/teams")
+    public ResponseEntity<List<TeamDto>> listTeams(@PathVariable int hackathonId) {
+        // Create a hackathon object for the service call
+        com.we.hack.model.Hackathon hackathon = new com.we.hack.model.Hackathon();
+        hackathon.setId((long) hackathonId);
+        return ResponseEntity.ok(hackathonService.listTeams(hackathon));
     }
 
+    // New endpoints for team join functionality
+    @PostMapping("/teams/{teamId}/join-request")
+    public ResponseEntity<String> requestToJoinTeam(@PathVariable long teamId, @RequestBody long userId) {
+        try {
+            teamService.addMemberToTeam(teamId, userId);
+            return ResponseEntity.ok("Successfully joined team");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("Failed to join team: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/hackathons/{hackathonId}/available-teams")
+    public ResponseEntity<List<TeamDto>> getAvailableTeams(@PathVariable int hackathonId) {
+        // Get all teams for the hackathon that are accepting new members
+        com.we.hack.model.Hackathon hackathon = new com.we.hack.model.Hackathon();
+        hackathon.setId((long) hackathonId);
+        return ResponseEntity.ok(hackathonService.listTeams(hackathon));
+    }
 
     @PostMapping("/update-status")
     public HackathonRole updateJudgeStatus(@RequestBody JudgeApprovalRequest request) {
@@ -80,6 +101,5 @@ public class HackathonRoleController {
                 request.getStatus()
         );
     }
-
 
 }

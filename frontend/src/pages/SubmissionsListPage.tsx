@@ -14,10 +14,12 @@ import {
   CircularProgress
 } from '@mui/material';
 import {
-  Description as SubmissionIcon,
+  Assignment as SubmissionIcon,
   Gavel as JudgeIcon,
   Visibility as ViewIcon,
-  Group as TeamIcon
+  Group as TeamIcon,
+  AttachFile as FileIcon,
+  Link as LinkIcon
 } from '@mui/icons-material';
 import { submissionAPI, hackathonRoleAPI, hackathonAPI, hackathonRegistrationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -30,6 +32,8 @@ interface Submission {
   hackathonId?: number;
   hackathonName?: string;
   submittedAt?: string;
+  projectUrl?: string;
+  filePath?: string;
 }
 
 interface UserRole {
@@ -74,7 +78,9 @@ const SubmissionsListPage: React.FC = () => {
                 teamName: submission.team?.name || `Team ${submission.teamId}`,
                 hackathonId: hackathon.id,
                 hackathonName: hackathon.title || `Hackathon ${hackathon.id}`,
-                submittedAt: submission.submitTime || new Date().toISOString()
+                submittedAt: submission.submitTime || new Date().toISOString(),
+                projectUrl: submission.projectUrl,
+                filePath: submission.filePath
               }));
               allSubmissions = [...allSubmissions, ...hackathonSubmissions];
               console.log(`✅ Found ${hackathonSubmissions.length} submissions in hackathon ${hackathon.id} (${hackathon.title})`);
@@ -272,6 +278,28 @@ const SubmissionsListPage: React.FC = () => {
                       sx={{ mb: 2 }}
                     />
                   )}
+
+                  {/* Resource Indicators */}
+                  <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
+                    {submission.filePath && (
+                      <Chip 
+                        icon={<FileIcon />}
+                        label="Files Available"
+                        size="small"
+                        color="secondary"
+                        variant="outlined"
+                      />
+                    )}
+                    {submission.projectUrl && (
+                      <Chip 
+                        icon={<LinkIcon />}
+                        label="Project Link"
+                        size="small"
+                        color="info"
+                        variant="outlined"
+                      />
+                    )}
+                  </Box>
 
                   {submission.submittedAt && (
                     <Typography variant="caption" color="textSecondary">

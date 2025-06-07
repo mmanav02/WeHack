@@ -7,4 +7,5 @@ import java.io.IOException;
 public interface UserService {
     User registerUser(User user) throws IOException;
     User loginUser(String email, String password);
+    User findByEmail(String email);
 }

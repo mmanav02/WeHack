@@ -22,7 +22,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.io.File;
@@ -30,6 +29,15 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.UrlResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/submissions")
@@ -88,16 +96,105 @@ public class SubmissionController {
     @GetMapping("/{submissionId}")
     public ResponseEntity<Submission> getSubmissionById(@PathVariable Long submissionId) {
         Submission submission = submissionService.findById(submissionId);
-        if (submission != null) {
-            return ResponseEntity.ok(submission);
-        } else {
+        if (submission == null) {
             return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(submission);
+    }
+
+    @GetMapping("/{submissionId}/download")
+    public ResponseEntity<Resource> downloadSubmissionFile(@PathVariable Long submissionId) {
+        try {
+            Submission submission = submissionService.findById(submissionId);
+            if (submission == null || submission.getFilePath() == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Build the full file path
+            String filePath = submission.getFilePath();
+            Path path = Paths.get(System.getProperty("user.dir"), filePath);
+            
+            if (!Files.exists(path)) {
+                return ResponseEntity.notFound().build();
+            }
+
+            Resource resource = new UrlResource(path.toUri());
+            
+            if (resource.exists() && resource.isReadable()) {
+                // Get the original filename from the stored path
+                String originalFilename = path.getFileName().toString();
+                
+                // Remove timestamp prefix if it exists (format: timestamp_originalname)
+                if (originalFilename.contains("_")) {
+                    originalFilename = originalFilename.substring(originalFilename.indexOf("_") + 1);
+                }
+
+                return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + originalFilename + "\"")
+                    .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
         }
     }
 
     @PostMapping("/undoLastEdit")
     public Submission undoLastEdit(@RequestBody UndoSubmitProjectRequest request) {
         return submissionService.undoLastEdit(request.getTeamId(), request.getSubmissionId(), request.getHackathonId());
+    }
+
+    @GetMapping("/{submissionId}/file-info")
+    public ResponseEntity<Map<String, String>> getSubmissionFileInfo(@PathVariable Long submissionId) {
+        try {
+            Submission submission = submissionService.findById(submissionId);
+            if (submission == null || submission.getFilePath() == null) {
+                return ResponseEntity.notFound().build();
+            }
+
+            // Build the full file path
+            String filePath = submission.getFilePath();
+            Path path = Paths.get(System.getProperty("user.dir"), filePath);
+            
+            Map<String, String> fileInfo = new HashMap<>();
+            
+            if (Files.exists(path)) {
+                String originalFilename = path.getFileName().toString();
+                
+                // Remove timestamp prefix if it exists
+                if (originalFilename.contains("_")) {
+                    originalFilename = originalFilename.substring(originalFilename.indexOf("_") + 1);
+                }
+                
+                try {
+                    long fileSize = Files.size(path);
+                    fileInfo.put("filename", originalFilename);
+                    fileInfo.put("size", String.valueOf(fileSize));
+                    fileInfo.put("sizeFormatted", formatFileSize(fileSize));
+                    fileInfo.put("available", "true");
+                } catch (Exception e) {
+                    fileInfo.put("filename", originalFilename);
+                    fileInfo.put("available", "true");
+                    fileInfo.put("size", "unknown");
+                }
+            } else {
+                fileInfo.put("available", "false");
+                fileInfo.put("filename", "File not found");
+            }
+            
+            return ResponseEntity.ok(fileInfo);
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
+    
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        int exp = (int) (Math.log(bytes) / Math.log(1024));
+        String pre = "KMGTPE".charAt(exp-1) + "";
+        return String.format("%.1f %sB", bytes / Math.pow(1024, exp), pre);
     }
 
 }

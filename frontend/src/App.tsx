@@ -27,6 +27,7 @@ const SubmissionDetailsPage = React.lazy(() => import('./pages/SubmissionDetails
 const SubmissionsListPage = React.lazy(() => import('./pages/SubmissionsListPage'));
 const JudgeManagementPage = React.lazy(() => import('./pages/JudgeManagementPage'));
 const TeamManagementPage = React.lazy(() => import('./pages/TeamManagementPage'));
+const BrowseTeamsPage = React.lazy(() => import('./pages/BrowseTeamsPage'));
 const ApplyAsJudgePage = React.lazy(() => import('./pages/ApplyAsJudgePage'));
 const LeaderboardPage = React.lazy(() => import('./pages/LeaderboardPage'));
 
@@ -90,6 +91,7 @@ const App: React.FC = () => {
                 <Route path="/hackathons/:hackathonId/team-management" element={<Suspense fallback={<PageLoader />}><TeamManagementPage /></Suspense>} />
                 <Route path="/hackathons/:hackathonId/apply-judge" element={<Suspense fallback={<PageLoader />}><ApplyAsJudgePage /></Suspense>} />
                 <Route path="/hackathons/:hackathonId/leaderboard" element={<Suspense fallback={<PageLoader />}><LeaderboardPage /></Suspense>} />
+                <Route path="/hackathons/:hackathonId/browse-teams" element={<Suspense fallback={<PageLoader />}><BrowseTeamsPage /></Suspense>} />
               </Routes>
             </Container>
           </Box>

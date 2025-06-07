@@ -7,7 +7,8 @@ const CreateHackathonPage: React.FC = () => {
   const { user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState(''); // Consider using a date picker component
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [scoringMethod, setScoringMethod] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -25,22 +26,40 @@ const CreateHackathonPage: React.FC = () => {
     }
 
     // Basic validation (add more as needed)
-    if (!title || !description || !date || !scoringMethod) {
+    if (!title || !description || !startDate || !endDate || !scoringMethod) {
       setError('Please fill in all fields.');
       return;
     }
 
+    // Validate that end date is after start date
+    if (new Date(endDate) <= new Date(startDate)) {
+      setError('End date must be after start date.');
+      return;
+    }
+
     try {
+      // Convert dates to ISO string format for backend
+      const startDateISO = new Date(startDate + 'T00:00:00.000Z').toISOString();
+      const endDateISO = new Date(endDate + 'T23:59:59.999Z').toISOString();
+
       const response = await hackathonAPI.create({
         userId: user.id,
         title,
         description,
-        date,
+        startDate: startDateISO,
+        endDate: endDateISO,
         scoringMethod,
+        smtpPassword: '', // Default empty
+        mailMode: 'NONE' // Default value - use valid enum value
       });
       console.log('Hackathon created successfully:', response.data);
       setSuccess('Hackathon created successfully!');
-      // Optionally clear form or redirect
+      // Clear form
+      setTitle('');
+      setDescription('');
+      setStartDate('');
+      setEndDate('');
+      setScoringMethod('');
     } catch (err) {
       console.error('Error creating hackathon:', err);
       setError('Failed to create hackathon. Please try again.');
@@ -74,9 +93,24 @@ const CreateHackathonPage: React.FC = () => {
             <TextField
               required
               fullWidth
-              label="Date (YYYY-MM-DD)" // Indicate expected format
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
+              label="Start Date"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+            <TextField
+              required
+              fullWidth
+              label="End Date"
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
             <FormControl fullWidth required>
               <InputLabel id="scoring-method-label">Scoring Method</InputLabel>
