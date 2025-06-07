@@ -71,7 +71,7 @@ const Home = () => {
          <Typography variant="h4" gutterBottom textAlign="center">
            Featured Hackathons
          </Typography>
-         <HackathonList limit={3} />
+         <HackathonList limit={3} showActionsOnly={false} />
        </Container>
 
     </Box>

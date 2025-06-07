@@ -29,9 +29,10 @@ interface Hackathon {
 
 interface HackathonListProps {
     limit?: number;
+    showActionsOnly?: boolean;
 }
 
-const HackathonList: React.FC<HackathonListProps> = ({ limit }) => {
+const HackathonList: React.FC<HackathonListProps> = ({ limit, showActionsOnly = true }) => {
     const [hackathons, setHackathons] = useState<Hackathon[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string>('');
@@ -218,27 +219,31 @@ const HackathonList: React.FC<HackathonListProps> = ({ limit }) => {
                                 >
                                     View Details
                                 </Button>
-                                <Button 
-                                    variant="outlined" 
-                                    onClick={() => handleRegisterClick(hackathon.id)}
-                                >
-                                    {user ? 'Register' : 'Register (Login Required)'}
-                                </Button>
-                                <Button 
-                                    variant="outlined" 
-                                    color="secondary"
-                                    onClick={() => {
-                                        if (user) {
-                                            navigate(`/hackathons/${hackathon.id}/apply-judge`);
-                                        } else {
-                                            setSelectedHackathonId(hackathon.id);
-                                            setShowAuthDialog(true);
-                                        }
-                                    }}
-                                    sx={{ px: 2 }}
-                                >
-                                    Apply as Judge
-                                </Button>
+                                {showActionsOnly && (
+                                    <>
+                                        <Button 
+                                            variant="outlined" 
+                                            onClick={() => handleRegisterClick(hackathon.id)}
+                                        >
+                                            {user ? 'Register' : 'Register (Login Required)'}
+                                        </Button>
+                                        <Button 
+                                            variant="outlined" 
+                                            color="secondary"
+                                            onClick={() => {
+                                                if (user) {
+                                                    navigate(`/hackathons/${hackathon.id}/apply-judge`);
+                                                } else {
+                                                    setSelectedHackathonId(hackathon.id);
+                                                    setShowAuthDialog(true);
+                                                }
+                                            }}
+                                            sx={{ px: 2 }}
+                                        >
+                                            Apply as Judge
+                                        </Button>
+                                    </>
+                                )}
                             </Box>
                         </CardContent>
                     </Card>
