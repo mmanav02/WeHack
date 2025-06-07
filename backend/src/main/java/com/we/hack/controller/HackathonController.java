@@ -42,7 +42,8 @@ public class HackathonController {
         return hackathonService.createHackathon(
                 request.getTitle(),
                 request.getDescription(),
-                request.getDate(),
+                request.getStartDate(),
+                request.getEndDate(),
                 organizer,
                 request.getScoringMethod(),
                 request.getSmtpPassword(),

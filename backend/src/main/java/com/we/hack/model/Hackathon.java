@@ -5,6 +5,8 @@ import com.we.hack.service.visitor.AnalyticsVisitor;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.Instant;
+
 @Entity
 @Data
 @NoArgsConstructor
@@ -17,7 +19,8 @@ public class Hackathon {
 
     private String title;
     private String description;
-    private String date; // You can later change it to LocalDateTime if needed
+    private Instant startDate; // You can later change it to LocalDateTime if needed
+    private Instant endDate;
     private String status; // Example values: "Draft", "Published", etc.
     @Getter
     @Setter
