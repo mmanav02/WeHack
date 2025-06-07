@@ -57,30 +57,39 @@ const SubmissionDetailsPage: React.FC = () => {
   const fetchSubmission = async () => {
     try {
       setLoading(true);
-      // Backend doesn't have GET /submissions/{id} endpoint yet
-      // Using mock data for demonstration
       
-      const mockSubmission: Submission = {
-        id: parseInt(submissionId!),
-        title: `Sample Project ${submissionId}`,
-        description: `This is a detailed description of submission ${submissionId}. This project demonstrates innovative use of technology to solve real-world problems. The team has implemented cutting-edge solutions with excellent execution and potential for significant impact.`,
-        teamName: `Team Alpha ${submissionId}`,
-        projectUrl: "https://example.com/demo",
-        repoUrl: "https://github.com/example/project",
-        technology: ["React", "Node.js", "MongoDB", "AI/ML"],
-        submittedAt: new Date().toISOString(),
-        hackathonId: 1,
-        hackathonName: "Tech Innovation 2024"
-      };
+      // Now use the real API endpoint
+      const response = await submissionAPI.getById(parseInt(submissionId!));
+      const submissionData = response.data;
       
-      setSubmission(mockSubmission);
+      if (submissionData) {
+        // Map backend data to frontend interface
+        const submission: Submission = {
+          id: submissionData.id,
+          title: submissionData.title || `Submission ${submissionData.id}`,
+          description: submissionData.description || 'No description provided.',
+          teamName: submissionData.team?.name || `Team ${submissionData.team?.id || 'Unknown'}`,
+          projectUrl: submissionData.projectUrl,
+          repoUrl: submissionData.repoUrl, // This field might not exist in backend yet
+          technology: submissionData.technology || [], // This field might not exist in backend yet
+          submittedAt: submissionData.submitTime,
+          hackathonId: submissionData.hackathon?.id,
+          hackathonName: submissionData.hackathon?.title || 'Unknown Hackathon'
+        };
+        
+        setSubmission(submission);
+        console.log('📋 Found submission:', submission);
+      } else {
+        setError('Submission not found. It may have been deleted or you may not have permission to view it.');
+      }
       
-      // TODO: Replace with actual API call when backend endpoint is available
-      // const response = await submissionAPI.getById(parseInt(submissionId!));
-      // setSubmission(response.data);
     } catch (err: any) {
       console.error('Failed to fetch submission:', err);
-      setError('Failed to load submission details. Please try again.');
+      if (err.response?.status === 404) {
+        setError('Submission not found. It may have been deleted or you may not have permission to view it.');
+      } else {
+        setError('Failed to load submission details. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

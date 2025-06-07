@@ -18,4 +18,7 @@ public interface SubmissionService {
     
     // Add method to find submissions by hackathon ID
     List<Submission> findByHackathonId(int hackathonId);
+    
+    // Add method to find submission by ID
+    Submission findById(Long submissionId);
 }

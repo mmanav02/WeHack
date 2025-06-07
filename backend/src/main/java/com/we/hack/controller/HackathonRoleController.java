@@ -50,6 +50,11 @@ public class HackathonRoleController {
         return hackathonService.getPendingJudgeRequests(hackathonId);
     }
 
+    @GetMapping("/hackathons/{hackathonId}/participants")
+    public List<HackathonRole> getParticipants(@PathVariable int hackathonId) {
+        return hackathonService.getParticipants(hackathonId);
+    }
+
     @PostMapping("/create-team")
     public Team createTeam(@RequestBody TeamRequest request) {
         return teamService.createTeam(request.getUserId(), request.getName(), request.getHackathonId());

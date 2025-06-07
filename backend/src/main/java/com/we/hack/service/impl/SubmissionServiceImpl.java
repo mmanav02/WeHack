@@ -265,4 +265,9 @@ public class SubmissionServiceImpl implements SubmissionService {
     public List<Submission> findByHackathonId(int hackathonId) {
         return submissionRepository.findByHackathonId(hackathonId);
     }
+
+    @Override
+    public Submission findById(Long submissionId) {
+        return submissionRepository.findById(submissionId).orElse(null);
+    }
 }

@@ -95,6 +95,7 @@ const HackathonDetailsPage: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [isApprovedJudge, setIsApprovedJudge] = useState(false);
 
   // State flow steps
   const steps = ['Draft', 'Published', 'Judging', 'Completed'];
@@ -109,8 +110,9 @@ const HackathonDetailsPage: React.FC = () => {
     if (hackathonId) {
       fetchHackathon();
       fetchParticipants();
+      checkJudgeStatus();
     }
-  }, [hackathonId]);
+  }, [hackathonId, user]);
 
   const fetchHackathon = async () => {
     try {
@@ -161,37 +163,63 @@ const HackathonDetailsPage: React.FC = () => {
 
   const fetchParticipants = async () => {
     try {
-      // Get real judge requests from backend
-      const judgeRequestsResponse = await hackathonRegistrationAPI.getPendingJudgeRequests(parseInt(hackathonId!));
-      const judgeRequests = judgeRequestsResponse.data || [];
+      // Fetch actual participants from backend
+      const participantsResponse = await hackathonRegistrationAPI.getParticipants(parseInt(hackathonId!));
+      const participantRoles = participantsResponse.data || [];
       
-      // Transform judge requests to participant format
-      const realParticipants: Participant[] = judgeRequests.map((request: any) => ({
-        id: request.user?.id || request.userId,
-        username: request.user?.username || `User ${request.userId}`,
-        email: request.user?.email || `user${request.userId}@example.com`,
-        role: 'JUDGE',
-        status: request.status // PENDING, APPROVED, REJECTED
+      // Transform participant roles to participant format
+      const realParticipants: Participant[] = participantRoles.map((role: any) => ({
+        id: role.user?.id || role.userId,
+        username: role.user?.username || `User ${role.userId}`,
+        email: role.user?.email || `user${role.userId}@example.com`,
+        role: 'PARTICIPANT',
+        status: role.status // Should be APPROVED for participants
       }));
       
-      // TODO: Add API call for regular participants when available
-      // For now, we only show judges from the real API
-      
+      // Only set participants, no judge requests
       setParticipants(realParticipants);
+      
+      console.log(`✅ Found ${realParticipants.length} participants`);
       
       // Update hackathon statistics with real data
       if (hackathon) {
         setHackathon(prev => prev ? {
           ...prev,
-          judgesCount: realParticipants.filter(p => p.role === 'JUDGE').length,
-          participantsCount: realParticipants.filter(p => p.role === 'PARTICIPANT').length
+          participantsCount: realParticipants.length,
+          judgesCount: 0 // We don't show judges here anymore
         } : null);
       }
       
     } catch (err) {
       console.error('Failed to fetch participants:', err);
-      // Fallback to empty list instead of mock data
+      // Fallback to empty list
       setParticipants([]);
+    }
+  };
+
+  const checkJudgeStatus = async () => {
+    try {
+      if (!user) {
+        setIsApprovedJudge(false);
+        return;
+      }
+      
+      // Get judge requests for this hackathon
+      const judgeRequestsResponse = await hackathonRegistrationAPI.getPendingJudgeRequests(parseInt(hackathonId!));
+      const judgeRequests = judgeRequestsResponse.data || [];
+      
+      // Check if current user is an approved judge
+      const userJudgeRequest = judgeRequests.find((request: any) => 
+        (request.user?.id === user.id || request.userId === user.id) && 
+        request.status === 'APPROVED'
+      );
+      
+      setIsApprovedJudge(!!userJudgeRequest);
+      console.log(`🔍 Judge status check: ${!!userJudgeRequest ? 'APPROVED' : 'NOT APPROVED'} for user ${user.email}`);
+      
+    } catch (err) {
+      console.error('Failed to check judge status:', err);
+      setIsApprovedJudge(false);
     }
   };
 
@@ -495,6 +523,18 @@ const HackathonDetailsPage: React.FC = () => {
                   </Button>
                 )}
                 
+                {/* Judge Submissions Button - Only for approved judges in Judging state */}
+                {isApprovedJudge && hackathon.status === 'Judging' && (
+                  <Button
+                    variant="contained"
+                    color="secondary"
+                    startIcon={<JudgeIcon />}
+                    onClick={() => navigate('/submissions')}
+                  >
+                    Judge Submissions
+                  </Button>
+                )}
+                
                 {/* Registration & Project Submission - Only for non-organizers in Published state */}
                 {!isOrganizer() && hackathon.status === 'Published' && (
                   <>
@@ -552,10 +592,6 @@ const HackathonDetailsPage: React.FC = () => {
                 <Typography>Participants: {hackathon.participantsCount || 0}</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <JudgeIcon color="secondary" />
-                <Typography>Judges: {hackathon.judgesCount || 0}</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <SubmissionIcon color="success" />
                 <Typography>Submissions: {hackathon.submissionsCount || 0}</Typography>
               </Box>
@@ -565,7 +601,7 @@ const HackathonDetailsPage: React.FC = () => {
           {/* List of Participants */}
           <Paper elevation={3} sx={{ p: 3 }}>
             <Typography variant="h6" gutterBottom>
-              List of (Participants)
+              List of Participants
             </Typography>
             
             {/* State-specific context */}
@@ -576,66 +612,39 @@ const HackathonDetailsPage: React.FC = () => {
             )}
             {hackathon.status === 'Published' && (
               <Alert severity="success" sx={{ mb: 2 }}>
-                Registration is open! Participants and judges can now join
+                Registration is open! Participants can now join
               </Alert>
             )}
             {hackathon.status === 'Judging' && (
               <Alert severity="info" sx={{ mb: 2 }}>
-                Only approved judges can access submissions for evaluation
+                Hackathon is in judging phase
               </Alert>
             )}
             {hackathon.status === 'Completed' && (
               <Alert severity="info" sx={{ mb: 2 }}>
-                Final participant list and results are now available
+                Final participant list is now available
               </Alert>
             )}
             
             <List dense>
-              {participants.map((participant) => (
-                <ListItem key={participant.id}>
-                  <ListItemAvatar>
-                    <Avatar>
-                      {participant.role === 'JUDGE' ? <JudgeIcon /> : <PersonIcon />}
-                    </Avatar>
-                  </ListItemAvatar>
-                  <ListItemText
-                    primary={participant.username}
-                    secondary={
-                      <Box>
-                        <Typography variant="body2" color="text.secondary">
-                          {participant.email}
-                        </Typography>
-                        <Box sx={{ display: 'flex', gap: 1, mt: 0.5 }}>
-                          <Chip
-                            size="small"
-                            label={participant.role}
-                            color={participant.role === 'JUDGE' ? 'secondary' : 'primary'}
-                          />
-                          {participant.status && (
-                            <Chip
-                              size="small"
-                              label={participant.status}
-                              color={
-                                participant.status === 'APPROVED' ? 'success' :
-                                participant.status === 'REJECTED' ? 'error' :
-                                'warning'
-                              }
-                              variant="outlined"
-                            />
-                          )}
-                        </Box>
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              ))}
-              {participants.length === 0 && (
-                <ListItem>
-                  <ListItemText
-                    primary="No participants yet"
-                    secondary="Be the first to join this hackathon!"
-                  />
-                </ListItem>
+              {participants.length > 0 ? (
+                participants.map((participant) => (
+                  <ListItem key={participant.id}>
+                    <ListItemAvatar>
+                      <Avatar>
+                        <PersonIcon />
+                      </Avatar>
+                    </ListItemAvatar>
+                    <ListItemText
+                      primary={participant.username}
+                      secondary={participant.email}
+                    />
+                  </ListItem>
+                ))
+              ) : (
+                <Typography variant="body2" color="text.secondary" sx={{ p: 2, textAlign: 'center' }}>
+                  No participants yet
+                </Typography>
               )}
             </List>
           </Paper>

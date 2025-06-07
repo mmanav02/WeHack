@@ -85,6 +85,16 @@ public class SubmissionController {
         return ResponseEntity.ok(submissions);
     }
 
+    @GetMapping("/{submissionId}")
+    public ResponseEntity<Submission> getSubmissionById(@PathVariable Long submissionId) {
+        Submission submission = submissionService.findById(submissionId);
+        if (submission != null) {
+            return ResponseEntity.ok(submission);
+        } else {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @PostMapping("/undoLastEdit")
     public Submission undoLastEdit(@RequestBody UndoSubmitProjectRequest request) {
         return submissionService.undoLastEdit(request.getTeamId(), request.getSubmissionId(), request.getHackathonId());

@@ -28,6 +28,7 @@ const SubmissionsListPage = React.lazy(() => import('./pages/SubmissionsListPage
 const JudgeManagementPage = React.lazy(() => import('./pages/JudgeManagementPage'));
 const TeamManagementPage = React.lazy(() => import('./pages/TeamManagementPage'));
 const ApplyAsJudgePage = React.lazy(() => import('./pages/ApplyAsJudgePage'));
+const LeaderboardPage = React.lazy(() => import('./pages/LeaderboardPage'));
 
 // Loading component for Suspense fallback
 const PageLoader = () => (
@@ -88,6 +89,7 @@ const App: React.FC = () => {
                 <Route path="/hackathons/:hackathonId/judge-management" element={<Suspense fallback={<PageLoader />}><JudgeManagementPage /></Suspense>} />
                 <Route path="/hackathons/:hackathonId/team-management" element={<Suspense fallback={<PageLoader />}><TeamManagementPage /></Suspense>} />
                 <Route path="/hackathons/:hackathonId/apply-judge" element={<Suspense fallback={<PageLoader />}><ApplyAsJudgePage /></Suspense>} />
+                <Route path="/hackathons/:hackathonId/leaderboard" element={<Suspense fallback={<PageLoader />}><LeaderboardPage /></Suspense>} />
               </Routes>
             </Container>
           </Box>

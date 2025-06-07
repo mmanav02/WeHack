@@ -23,14 +23,16 @@ import {
   TrendingUp as ImpactIcon,
   Engineering as ExecutionIcon
 } from '@mui/icons-material';
-import { judgeScoreAPI, submissionAPI } from '../services/api';
+import { judgeScoreAPI, submissionAPI, hackathonAPI, hackathonRegistrationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Submission {
   id: number;
   title: string;
   description: string;
-  teamName: string;
+  teamName?: string;
+  projectUrl?: string;
+  hackathonId?: number;
   // Add more fields as needed
 }
 
@@ -44,6 +46,8 @@ const SubmitScorePage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [isApprovedJudge, setIsApprovedJudge] = useState(false);
+  const [hackathonStatus, setHackathonStatus] = useState<string>('');
 
   // Score states
   const [innovation, setInnovation] = useState<number>(5);
@@ -56,24 +60,93 @@ const SubmitScorePage: React.FC = () => {
     }
   }, [submissionId]);
 
+  useEffect(() => {
+    if (submission && user) {
+      checkJudgePermissions();
+    }
+  }, [submission, user]);
+
+  const checkJudgePermissions = async () => {
+    if (!submission || !user) return;
+    
+    try {
+      // Get hackathon details to check status
+      const hackathonsResponse = await hackathonAPI.getAll();
+      const hackathon = hackathonsResponse.data.find((h: any) => h.id === submission.hackathonId);
+      
+      if (hackathon) {
+        setHackathonStatus(hackathon.status);
+        
+        // Only allow scoring during Judging phase
+        if (hackathon.status !== 'Judging') {
+          setError(`Scoring is only available during the Judging phase. Current status: ${hackathon.status}`);
+          return;
+        }
+      }
+      
+      // Check if user is an approved judge for this hackathon
+      const judgeRequestsResponse = await hackathonRegistrationAPI.getPendingJudgeRequests(submission.hackathonId!);
+      const judgeRequests = judgeRequestsResponse.data || [];
+      
+      const userJudgeRequest = judgeRequests.find((request: any) => 
+        (request.user?.id === user.id || request.userId === user.id) && 
+        request.status === 'APPROVED'
+      );
+      
+      if (userJudgeRequest) {
+        setIsApprovedJudge(true);
+        console.log('✅ User is approved judge for this hackathon');
+      } else {
+        setIsApprovedJudge(false);
+        setError('You are not an approved judge for this hackathon. Only approved judges can score submissions.');
+      }
+      
+    } catch (err) {
+      console.error('Failed to check judge permissions:', err);
+      setError('Failed to verify judge permissions. Please try again.');
+    }
+  };
+
   const fetchSubmission = async () => {
     try {
       setLoading(true);
-      // Backend doesn't have GET /submissions/{id} endpoint yet  
-      // Using mock data for demonstration
       
-      const mockSubmission: Submission = {
-        id: parseInt(submissionId!),
-        title: `Innovative Project ${submissionId}`,
-        description: `A comprehensive solution that addresses real-world challenges through innovative technology implementation.`,
-        teamName: `Team Beta ${submissionId}`
-      };
+      // Get all hackathons to find submissions
+      const hackathonsResponse = await hackathonAPI.getAll();
+      const allHackathons = hackathonsResponse.data;
       
-      setSubmission(mockSubmission);
+      let foundSubmission: Submission | null = null;
       
-      // TODO: Replace with actual API call when backend endpoint is available
-      // const response = await submissionAPI.getById(parseInt(submissionId!));
-      // setSubmission(response.data);
+      // Search through all hackathons for the submission
+      for (const hackathon of allHackathons) {
+        try {
+          const submissionsResponse = await submissionAPI.getByHackathon(hackathon.id);
+          const submissions = submissionsResponse.data || [];
+          
+          const submission = submissions.find((s: any) => s.id === parseInt(submissionId!));
+          if (submission) {
+            foundSubmission = {
+              id: submission.id,
+              title: submission.title,
+              description: submission.description,
+              teamName: submission.team?.name || `Team ${submission.teamId}`,
+              projectUrl: submission.projectUrl,
+              hackathonId: hackathon.id
+            };
+            break;
+          }
+        } catch (err) {
+          console.log(`No submissions found for hackathon ${hackathon.id}`);
+        }
+      }
+      
+      if (foundSubmission) {
+        setSubmission(foundSubmission);
+        console.log('📋 Found submission:', foundSubmission);
+      } else {
+        setError('Submission not found. It may have been deleted or you may not have permission to view it.');
+      }
+      
     } catch (err: any) {
       console.error('Failed to fetch submission:', err);
       setError('Failed to load submission details. Please try again.');
@@ -90,8 +163,18 @@ const SubmitScorePage: React.FC = () => {
       return;
     }
 
+    if (!isApprovedJudge) {
+      setError('Only approved judges can submit scores.');
+      return;
+    }
+
+    if (hackathonStatus !== 'Judging') {
+      setError('Scoring is only available during the Judging phase.');
+      return;
+    }
+
     try {
-      setLoading(true);
+      setSubmitting(true);
       setError('');
 
       const scoreData = {
@@ -127,7 +210,7 @@ const SubmitScorePage: React.FC = () => {
         setError(err.response?.data?.message || 'Failed to submit score. Please try again.');
       }
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -360,13 +443,32 @@ const SubmitScorePage: React.FC = () => {
             </Typography>
           </Box>
 
+          {/* Status Messages */}
+          {hackathonStatus && hackathonStatus !== 'Judging' && (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+              Scoring is only available during the Judging phase. Current status: {hackathonStatus}
+            </Alert>
+          )}
+          
+          {!isApprovedJudge && user && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              You must be an approved judge for this hackathon to submit scores.
+            </Alert>
+          )}
+
+          {isApprovedJudge && hackathonStatus === 'Judging' && (
+            <Alert severity="success" sx={{ mb: 3 }}>
+              ✅ You are authorized to score this submission as an approved judge.
+            </Alert>
+          )}
+
           {/* Submit Button */}
           <Box sx={{ textAlign: 'center' }}>
             <Button
               type="submit"
               variant="contained"
               size="large"
-              disabled={submitting}
+              disabled={submitting || !isApprovedJudge || hackathonStatus !== 'Judging'}
               startIcon={submitting ? <CircularProgress size={20} /> : <SendIcon />}
               sx={{
                 px: 6,

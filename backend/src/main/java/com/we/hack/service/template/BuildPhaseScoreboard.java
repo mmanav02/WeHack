@@ -1,10 +1,12 @@
 package com.we.hack.service.template;
 
 import com.we.hack.model.Submission;
+import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.List;
 
+@Service
 public class BuildPhaseScoreboard extends ScoreboardTemplate {
 
     @Override

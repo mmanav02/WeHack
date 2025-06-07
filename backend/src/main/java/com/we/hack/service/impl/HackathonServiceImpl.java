@@ -23,8 +23,10 @@ import com.we.hack.service.template.BuildPhaseScoreboard;
 import com.we.hack.service.template.JudgingPhaseScoreboard;
 import com.we.hack.service.template.ScoreboardTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -62,6 +64,12 @@ public class HackathonServiceImpl implements HackathonService {
     @Autowired
     private TeamRepository teamRepository;
 
+    @Autowired
+    private EntityManager entityManager;
+
+    @Autowired
+    private ApplicationContext applicationContext;
+
     @Override
     public Hackathon createHackathon(String title, String description, String date, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode) {
         if(mailMode == MailModes.ORGANIZED) {
@@ -83,17 +91,49 @@ public class HackathonServiceImpl implements HackathonService {
 
     @Transactional
     public void deleteHackathon(long hackathonId) {
-        // First, delete all related HackathonRole records to avoid foreign key constraint
-        hackathonRoleRepository.deleteByHackathonId((int) hackathonId);
-        
-        // Second, delete all related submissions
-        submissionRepository.deleteByHackathonId((int) hackathonId);
-        
-        // Third, delete all related Team records
-        teamRepository.deleteByHackathonId((int) hackathonId);
-        
-        // Finally, delete the hackathon itself
-        hackathonRepository.deleteById((int) hackathonId);
+        try {
+            // Clear Hibernate session to avoid any cached entities
+            entityManager.flush();
+            entityManager.clear();
+            
+            // Delete in proper order to respect foreign key constraints
+            // 1. Delete hackathon roles first
+            hackathonRoleRepository.deleteByHackathonId((int) hackathonId);
+            
+            // 2. Clear team-submission relationships to avoid circular reference issues
+            entityManager.createNativeQuery("UPDATE teams SET submission_id = NULL WHERE hackathon_id = ?")
+                    .setParameter(1, hackathonId)
+                    .executeUpdate();
+            
+            // 3. Clear submission-team relationships 
+            entityManager.createNativeQuery("UPDATE submission SET team_id = NULL WHERE hackathon_id = ?")
+                    .setParameter(1, hackathonId)
+                    .executeUpdate();
+            
+            // 4. Delete judge scores (must be done before submissions)
+            judgeScoreRepository.deleteByHackathonId((int) hackathonId);
+            
+            // 5. Delete team_members junction table entries
+            entityManager.createNativeQuery("DELETE FROM team_members WHERE team_id IN (SELECT id FROM teams WHERE hackathon_id = ?)")
+                    .setParameter(1, hackathonId)
+                    .executeUpdate();
+            
+            // 6. Delete teams 
+            teamRepository.deleteByHackathonId((int) hackathonId);
+            
+            // 7. Delete submissions
+            submissionRepository.deleteByHackathonId((int) hackathonId);
+            
+            // 8. Finally delete the hackathon
+            hackathonRepository.deleteById((int) hackathonId);
+            
+            // Force commit
+            entityManager.flush();
+        } catch (Exception e) {
+            System.err.println("Error deleting hackathon " + hackathonId + ": " + e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException("Failed to delete hackathon: " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -208,6 +248,12 @@ public class HackathonServiceImpl implements HackathonService {
     }
 
     @Override
+    public List<HackathonRole> getParticipants(int hackathonId) {
+        // Return all participants (approved only since participants are auto-approved)
+        return hackathonRoleRepository.findByHackathonIdAndRoleAndStatus(hackathonId, Role.PARTICIPANT, ApprovalStatus.APPROVED);
+    }
+
+    @Override
     public HackathonRole updateJudgeStatus(Long hackathonId, Long userId, ApprovalStatus status) {
         HackathonRole roleEntry = hackathonRoleRepository.findAll().stream()
                 .filter(r -> r.getHackathon().getId().equals(hackathonId) &&
@@ -254,9 +300,9 @@ public class HackathonServiceImpl implements HackathonService {
 
         ScoreboardTemplate scoreboard;
         if (status.equals("Draft") || status.equals("Published")) {
-            scoreboard = new BuildPhaseScoreboard();
+            scoreboard = applicationContext.getBean(BuildPhaseScoreboard.class);
         } else {
-            scoreboard = new JudgingPhaseScoreboard();
+            scoreboard = applicationContext.getBean(JudgingPhaseScoreboard.class);
         }
 
         return scoreboard.generate(hackathonId);

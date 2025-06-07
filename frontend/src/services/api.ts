@@ -46,6 +46,8 @@ export const hackathonRegistrationAPI = {
         api.post(`/hackathon-role/teams/${teamId}/add-member`, userId),
     getPendingJudgeRequests: (hackathonId: number) => 
         api.get(`/hackathon-role/hackathons/${hackathonId}/judge-requests`),
+    getParticipants: (hackathonId: number) => 
+        api.get(`/hackathon-role/hackathons/${hackathonId}/participants`),
     // TODO: Backend GET /hackathon-role/iterator has issues (GET with @RequestBody)
     // listTeams: (requestData: { team?: any; hackathon: any }) => 
     //     api.get('/hackathon-role/iterator', { data: requestData }),
@@ -74,6 +76,7 @@ export const submissionAPI = {
     getByUser: (userId: number) => api.get(`/submissions/user/${userId}`),
     // TODO: Backend doesn't have these endpoints yet - using mock data instead
     // getById: (submissionId: number) => api.get(`/submissions/${submissionId}`),
+    getById: (submissionId: number) => api.get(`/submissions/${submissionId}`),
 };
 
 // Comment APIs

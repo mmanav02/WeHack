@@ -19,7 +19,7 @@ import {
   Visibility as ViewIcon,
   Group as TeamIcon
 } from '@mui/icons-material';
-import { submissionAPI, hackathonRoleAPI } from '../services/api';
+import { submissionAPI, hackathonRoleAPI, hackathonAPI, hackathonRegistrationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Submission {
@@ -57,39 +57,43 @@ const SubmissionsListPage: React.FC = () => {
       
       // Fetch real submissions from backend
       try {
-        // Try to fetch submissions from all hackathons
-        const hackathonIds = [1, 2]; // Try common hackathon IDs first
+        // Get all hackathons first
+        const hackathonsResponse = await hackathonAPI.getAll();
+        const allHackathons = hackathonsResponse.data;
         let allSubmissions: Submission[] = [];
         
-        for (const hackathonId of hackathonIds) {
+        // Fetch submissions from all hackathons
+        for (const hackathon of allHackathons) {
           try {
-            const response = await submissionAPI.getByHackathon(hackathonId);
+            const response = await submissionAPI.getByHackathon(hackathon.id);
             if (response.data && response.data.length > 0) {
               const hackathonSubmissions = response.data.map((submission: any) => ({
                 id: submission.id,
                 title: submission.title || `Submission ${submission.id}`,
                 description: submission.description || 'No description available',
-                teamName: submission.teamName || `Team ${submission.id}`,
-                hackathonId: hackathonId,
-                hackathonName: hackathonId === 1 ? 'nividia' : 'Adobe', // Map to real hackathon names
-                submittedAt: submission.submittedAt || new Date().toISOString()
+                teamName: submission.team?.name || `Team ${submission.teamId}`,
+                hackathonId: hackathon.id,
+                hackathonName: hackathon.title || `Hackathon ${hackathon.id}`,
+                submittedAt: submission.submitTime || new Date().toISOString()
               }));
               allSubmissions = [...allSubmissions, ...hackathonSubmissions];
+              console.log(`✅ Found ${hackathonSubmissions.length} submissions in hackathon ${hackathon.id} (${hackathon.title})`);
             }
           } catch (hackathonError) {
-            console.log(`No submissions found for hackathon ${hackathonId}`);
+            console.log(`No submissions found for hackathon ${hackathon.id}`);
           }
         }
         
         if (allSubmissions.length > 0) {
           setSubmissions(allSubmissions);
+          console.log(`📋 Total submissions found: ${allSubmissions.length}`);
         } else {
           // If no real submissions found, show empty state
           setSubmissions([]);
         }
         
       } catch (err) {
-        console.error('Failed to fetch real submissions, no submissions available:', err);
+        console.error('Failed to fetch real submissions:', err);
         setSubmissions([]); // Show empty state instead of mock data
       }
       
@@ -107,24 +111,44 @@ const SubmissionsListPage: React.FC = () => {
 
   const fetchUserRoles = async () => {
     try {
-      // Mock user roles for demonstration
-      // In real implementation, this would call: hackathonRoleAPI.getUserRoles(user.id)
+      if (!user) return;
       
-      const mockUserRoles: UserRole[] = [
-        // Example: User is a judge for hackathon 1, participant for hackathon 2
-        { hackathonId: 1, role: 'JUDGE', status: 'APPROVED' },
-        { hackathonId: 2, role: 'PARTICIPANT', status: 'APPROVED' }
-        // Add more roles as needed for testing
-      ];
+      // Get all hackathons to check judge status for each
+      const hackathonsResponse = await hackathonAPI.getAll();
+      const allHackathons = hackathonsResponse.data;
       
-      setUserRoles(mockUserRoles);
+      const userRoles: UserRole[] = [];
       
-      // TODO: Replace with actual API call when backend endpoint is available
-      // const response = await hackathonRoleAPI.getUserRoles(user.id);
-      // setUserRoles(response.data);
+      // Check judge status for each hackathon
+      for (const hackathon of allHackathons) {
+        try {
+          const judgeRequestsResponse = await hackathonRegistrationAPI.getPendingJudgeRequests(hackathon.id);
+          const judgeRequests = judgeRequestsResponse.data || [];
+          
+          // Find current user's judge request
+          const userJudgeRequest = judgeRequests.find((request: any) => 
+            request.user?.id === user.id || request.userId === user.id
+          );
+          
+          if (userJudgeRequest) {
+            userRoles.push({
+              hackathonId: hackathon.id,
+              role: 'JUDGE',
+              status: userJudgeRequest.status // PENDING, APPROVED, REJECTED
+            });
+          }
+        } catch (err) {
+          console.log(`No judge requests found for hackathon ${hackathon.id}`);
+        }
+      }
+      
+      console.log('🔍 User roles found:', userRoles);
+      setUserRoles(userRoles);
+      
     } catch (err: any) {
       console.error('Failed to fetch user roles:', err);
       // Don't show error for roles, just continue without judge permissions
+      setUserRoles([]);
     }
   };
 

@@ -27,6 +27,7 @@ public interface HackathonService {
     void leaveHackathon(long userId, long hackathonId);
 
     List<HackathonRole> getPendingJudgeRequests(int hackathonId);
+    List<HackathonRole> getParticipants(int hackathonId);
     HackathonRole updateJudgeStatus(Long hackathonId, Long userId, ApprovalStatus status);
 
     List<Submission> getLeaderboard(Long hackathonId);
