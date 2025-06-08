@@ -16,6 +16,7 @@ import com.we.hack.service.factory.HackathonRoleFactory;
 import com.we.hack.service.iterator.CollectionFactory;
 import com.we.hack.service.iterator.Iterator;
 import com.we.hack.service.observer.HackathonNotificationManager;
+import com.we.hack.service.observer.HackathonObserver;
 import com.we.hack.service.observer.HackathonObserverRegistry;
 import com.we.hack.service.observer.JudgeNotifier;
 import com.we.hack.service.state.*;
@@ -172,8 +173,11 @@ public class HackathonServiceImpl implements HackathonService {
         context.publish(hackathon);
         hackathonRepository.save(hackathon);
 
-        //  Notify all already registered judges
         HackathonNotificationManager notifier = new HackathonNotificationManager();
+        List<HackathonObserver> judgeObservers = HackathonObserverRegistry.getObservers(hackathonId);
+        for (HackathonObserver observer : judgeObservers) {
+            notifier.registerObserver(observer);
+        }
         notifier.notifyObservers(hackathonId, "Hackathon \"" + hackathon.getTitle() + "\" is now Published!");
     }
 
@@ -185,6 +189,12 @@ public class HackathonServiceImpl implements HackathonService {
 
         HackathonContext context = new HackathonContext(getStateFromStatus(hackathon.getStatus()));
         context.beginJudging(hackathon);
+        HackathonNotificationManager notifier = new HackathonNotificationManager();
+        List<HackathonObserver> judgeObservers = HackathonObserverRegistry.getObservers(hackathonId);
+        for (HackathonObserver observer : judgeObservers) {
+            notifier.registerObserver(observer);
+        }
+        notifier.notifyObservers(hackathonId, "Hackathon \"" + hackathon.getTitle() + "\": Judging phase started");
         hackathonRepository.save(hackathon);
     }
 
@@ -195,6 +205,12 @@ public class HackathonServiceImpl implements HackathonService {
 
         HackathonContext context = new HackathonContext(getStateFromStatus(hackathon.getStatus()));
         context.complete(hackathon);
+        HackathonNotificationManager notifier = new HackathonNotificationManager();
+        List<HackathonObserver> judgeObservers = HackathonObserverRegistry.getObservers(hackathonId);
+        for (HackathonObserver observer : judgeObservers) {
+            notifier.registerObserver(observer);
+        }
+        notifier.notifyObservers(hackathonId, "Hackathon \"" + hackathon.getTitle() + "\": Completed. Check Leaderboards");
         hackathonRepository.save(hackathon);
     }
 
