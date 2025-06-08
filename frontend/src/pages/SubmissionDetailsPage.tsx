@@ -22,7 +22,8 @@ import {
   Comment as CommentIcon,
   Download as DownloadIcon,
   Link as LinkIcon,
-  AttachFile as FileIcon
+  AttachFile as FileIcon,
+  Edit as EditIcon
 } from '@mui/icons-material';
 import { submissionAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -102,6 +103,10 @@ const SubmissionDetailsPage: React.FC = () => {
 
   const handleJudgeSubmission = () => {
     navigate(`/submissions/${submissionId}/score`);
+  };
+
+  const handleEditSubmission = () => {
+    navigate(`/submissions/${submissionId}/edit`);
   };
 
   const handleDownloadFile = async () => {
@@ -320,32 +325,36 @@ const SubmissionDetailsPage: React.FC = () => {
             </Card>
           )}
 
-          {/* Judge Actions */}
+          {/* Actions */}
           {user && (
             <Card elevation={2}>
               <CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                   <JudgeIcon sx={{ mr: 2, color: 'primary.main' }} />
                   <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-                    Judge Actions
+                    Actions
                   </Typography>
                 </Box>
-                <Box sx={{ display: 'flex', gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, gap: 2 }}>
                   <Button
                     variant="contained"
+                    onClick={handleEditSubmission}
+                    startIcon={<EditIcon />}
+                    color="primary"
+                  >
+                    Edit Submission
+                  </Button>
+                  <Button
+                    variant="outlined"
                     onClick={handleJudgeSubmission}
                     startIcon={<JudgeIcon />}
                   >
                     Submit Score
                   </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<CommentIcon />}
-                    disabled
-                  >
-                    Add Comments (Coming Soon)
-                  </Button>
                 </Box>
+                <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
+                  💡 Use version control features when editing to keep track of changes
+                </Typography>
               </CardContent>
             </Card>
           )}

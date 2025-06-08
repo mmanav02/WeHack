@@ -1,4 +1,4 @@
-import { Typography, Container, Paper, TextField, Button, Stack, FormControl, InputLabel, Select, MenuItem, Box } from '@mui/material';
+import { Typography, Container, Paper, TextField, Button, Stack, FormControl, InputLabel, Select, MenuItem, Box, FormControlLabel, Checkbox, Alert } from '@mui/material';
 import React, { useState } from 'react';
 import { hackathonAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,7 +9,8 @@ const CreateHackathonPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [scoringMethod, setScoringMethod] = useState('');
+  const [mailMode, setMailMode] = useState('NONE');
+  const [smtpPassword, setSmtpPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
@@ -26,8 +27,14 @@ const CreateHackathonPage: React.FC = () => {
     }
 
     // Basic validation (add more as needed)
-    if (!title || !description || !startDate || !endDate || !scoringMethod) {
+    if (!title || !description || !startDate || !endDate) {
       setError('Please fill in all fields.');
+      return;
+    }
+
+    // Validate Gmail SMTP password when ORGANIZED mode is selected
+    if (mailMode === 'ORGANIZED' && !smtpPassword.trim()) {
+      setError('SMTP password is required when using Gmail notifications.');
       return;
     }
 
@@ -48,9 +55,10 @@ const CreateHackathonPage: React.FC = () => {
         description,
         startDate: startDateISO,
         endDate: endDateISO,
-        scoringMethod,
-        smtpPassword: '', // Default empty
-        mailMode: 'NONE' // Default value - use valid enum value
+        scoringMethod: 'SIMPLE_AVERAGE', // Default value
+        smtpPassword: mailMode === 'ORGANIZED' ? smtpPassword : '',
+        mailMode,
+        slackEnabled: true // Always enabled by default
       });
       console.log('Hackathon created successfully:', response.data);
       setSuccess('Hackathon created successfully!');
@@ -59,7 +67,8 @@ const CreateHackathonPage: React.FC = () => {
       setDescription('');
       setStartDate('');
       setEndDate('');
-      setScoringMethod('');
+      setMailMode('NONE');
+      setSmtpPassword('');
     } catch (err) {
       console.error('Error creating hackathon:', err);
       setError('Failed to create hackathon. Please try again.');
@@ -112,22 +121,118 @@ const CreateHackathonPage: React.FC = () => {
                 shrink: true,
               }}
             />
-            <FormControl fullWidth required>
-              <InputLabel id="scoring-method-label">Scoring Method</InputLabel>
-              <Select
-                labelId="scoring-method-label"
-                id="scoring-method"
-                value={scoringMethod}
-                label="Scoring Method"
-                onChange={(e) => setScoringMethod(e.target.value)}
-              >
-                <MenuItem value="SIMPLE_AVERAGE">Simple Average</MenuItem>
-                <MenuItem value="WEIGHTED_AVERAGE">Weighted Average</MenuItem>
-              </Select>
-            </FormControl>
-            {error && <Typography color="error">{error}</Typography>}
-            {success && <Typography color="success.main">{success}</Typography>}
-            <Button type="submit" fullWidth variant="contained" size="large">
+
+            {/* Mail Configuration Section */}
+            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 2, p: 3, mt: 3 }}>
+              <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
+                📧 Email Notifications
+              </Typography>
+              
+              <FormControl fullWidth sx={{ mb: 2 }}>
+                <InputLabel>Email Provider</InputLabel>
+                <Select
+                  value={mailMode}
+                  onChange={(e) => setMailMode(e.target.value)}
+                  label="Email Provider"
+                >
+                  <MenuItem value="NONE">
+                    <Box>
+                      <Typography variant="body1">None</Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        No email notifications will be sent
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="ORGANIZED">
+                    <Box>
+                      <Typography variant="body1">Gmail (Your Account)</Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Use your Gmail account to send notifications
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                  <MenuItem value="MAILGUN">
+                    <Box>
+                      <Typography variant="body1">Mailgun Service</Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Use configured Mailgun service
+                      </Typography>
+                    </Box>
+                  </MenuItem>
+                </Select>
+              </FormControl>
+
+              {/* Gmail SMTP Password Field - Only shown when ORGANIZED is selected */}
+              {mailMode === 'ORGANIZED' && (
+                <Box sx={{ mt: 2 }}>
+                  <TextField
+                    required
+                    fullWidth
+                    type="password"
+                    label="Gmail App Password"
+                    placeholder="Enter your Gmail App Password"
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                    helperText={
+                      <Box component="span">
+                        <strong>Note:</strong> Use a Gmail App Password, not your regular password.
+                        <br />
+                        Generate one at: <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noopener noreferrer">Google App Passwords</a>
+                      </Box>
+                    }
+                  />
+                  
+                  <Alert severity="info" sx={{ mt: 2 }}>
+                    <Typography variant="body2">
+                      <strong>Gmail Setup Instructions:</strong>
+                    </Typography>
+                    <Typography variant="body2" component="div" sx={{ mt: 1 }}>
+                      1. Go to Google Account settings<br />
+                      2. Enable 2-factor authentication<br />
+                      3. Generate an App Password for "Mail"<br />
+                      4. Use the 16-character App Password here
+                    </Typography>
+                  </Alert>
+                </Box>
+              )}
+
+              {mailMode === 'MAILGUN' && (
+                <Alert severity="info" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>Mailgun Service:</strong> Uses the configured Mailgun API for reliable email delivery.
+                    No additional setup required.
+                  </Typography>
+                </Alert>
+              )}
+            </Box>
+
+            {/* Slack Integration Notice - Always Enabled */}
+            <Alert severity="info" sx={{ mt: 2 }}>
+              <Typography variant="body2">
+                <strong>💬 Slack Integration:</strong> Slack notifications are automatically enabled for all hackathons. 
+                Notifications will be sent to the configured Slack channel in addition to email.
+              </Typography>
+            </Alert>
+
+            {/* Error and Success Messages */}
+            {error && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                {error}
+              </Alert>
+            )}
+            {success && (
+              <Alert severity="success" sx={{ mt: 2 }}>
+                {success}
+              </Alert>
+            )}
+
+            <Button
+              type="submit"
+              variant="contained"
+              size="large"
+              fullWidth
+              sx={{ mt: 3, py: 1.5 }}
+            >
               Create Hackathon
             </Button>
           </Stack>

@@ -30,6 +30,9 @@ public class Submission {
 
     private String filePath;
 
+    @Column(name = "is_primary")
+    private boolean isPrimary = false;
+
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;

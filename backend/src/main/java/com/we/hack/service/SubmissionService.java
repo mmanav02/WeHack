@@ -21,4 +21,13 @@ public interface SubmissionService {
     
     // Add method to find submission by ID
     Submission findById(Long submissionId);
+    
+    // Add method to find submissions by user ID  
+    List<Submission> findByUserId(Long userId);
+    
+    // Set a submission as primary for its team
+    Submission setPrimarySubmission(Long submissionId, Long userId);
+    
+    // Get primary submissions for judges (only primary submissions)
+    List<Submission> getPrimarySubmissionsByHackathon(int hackathonId);
 }

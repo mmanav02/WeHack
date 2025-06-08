@@ -102,6 +102,30 @@ public class SubmissionController {
         return ResponseEntity.ok(submission);
     }
 
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Submission>> getSubmissionsByUser(@PathVariable Long userId) {
+        List<Submission> submissions = submissionService.findByUserId(userId);
+        return ResponseEntity.ok(submissions);
+    }
+
+    @PostMapping("/{submissionId}/setPrimary")
+    public ResponseEntity<Submission> setPrimarySubmission(
+            @PathVariable Long submissionId,
+            @RequestParam Long userId) {
+        try {
+            Submission submission = submissionService.setPrimarySubmission(submissionId, userId);
+            return ResponseEntity.ok(submission);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @GetMapping("/hackathon/{hackathonId}/primary")
+    public ResponseEntity<List<Submission>> getPrimarySubmissionsByHackathon(@PathVariable int hackathonId) {
+        List<Submission> submissions = submissionService.getPrimarySubmissionsByHackathon(hackathonId);
+        return ResponseEntity.ok(submissions);
+    }
+
     @GetMapping("/{submissionId}/download")
     public ResponseEntity<Resource> downloadSubmissionFile(@PathVariable Long submissionId) {
         try {

@@ -2,6 +2,7 @@ package com.we.hack.service.adapter;
 
 import com.we.hack.model.User;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -13,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 @Component
+@ConditionalOnProperty(name = "notifications.email.provider", havingValue = "mailgun")
 public class MailgunAdapter implements MailServiceAdapter {
 
     /** Mailgun domain: e.g. mg.example.com */

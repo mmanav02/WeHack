@@ -47,6 +47,7 @@ import {
 import { styled } from '@mui/material/styles';
 import { hackathonAPI, hackathonRegistrationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import CommentSection from '../components/CommentSection';
 
 interface Hackathon {
   id: number;
@@ -628,6 +629,18 @@ const HackathonDetailsPage: React.FC = () => {
                         Submit Project
                       </Button>
                     </Grid>
+                    <Grid item xs={12} sm={6} md={4}>
+                      <Button
+                        variant="outlined"
+                        color="secondary"
+                        startIcon={<SubmissionIcon />}
+                        onClick={() => navigate('/submissions')}
+                        fullWidth
+                        sx={{ height: 48 }}
+                      >
+                        View Submissions
+                      </Button>
+                    </Grid>
                   </>
                 )}
                 
@@ -657,6 +670,14 @@ const HackathonDetailsPage: React.FC = () => {
               </Grid>
             </Box>
           </Paper>
+
+          {/* Comments Section - Composite Pattern Implementation */}
+          {user && hackathon.status !== 'Draft' && (
+            <CommentSection 
+              hackathonId={hackathon.id} 
+              currentUserId={user.id}
+            />
+          )}
         </Grid>
 
         {/* Right Side - Participants & Stats */}

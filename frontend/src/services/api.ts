@@ -82,12 +82,31 @@ export const submissionAPI = {
     downloadFile: (submissionId: number) => api.get(`/submissions/${submissionId}/download`, {
         responseType: 'blob'  // Important for file downloads
     }),
+    setPrimary: (submissionId: number, userId: number) => 
+        api.post(`/submissions/${submissionId}/setPrimary?userId=${userId}`),
+    getPrimarySubmissions: (hackathonId: number) => 
+        api.get(`/submissions/hackathon/${hackathonId}/primary`),
 };
 
 // Comment APIs
 export const commentAPI = {
-    addComment: (commentData: any) => api.post('/comments', commentData),
-    getComments: (submissionId: number) => api.get(`/comments/submission/${submissionId}`),
+    addComment: (commentData: any) => {
+        // Convert JSON to form data for backend compatibility
+        const formData = new FormData();
+        formData.append('hackathonId', commentData.hackathonId.toString());
+        formData.append('userId', commentData.userId.toString());
+        formData.append('content', commentData.content);
+        if (commentData.parentId !== undefined) {
+            formData.append('parentId', commentData.parentId.toString());
+        }
+        
+        return api.post('/comments', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        });
+    },
+    getComments: (hackathonId: number) => api.get(`/comments/${hackathonId}`),
 };
 
 // Judge Score APIs - Updated to match JudgeScoreController

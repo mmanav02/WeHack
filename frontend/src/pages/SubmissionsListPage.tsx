@@ -50,6 +50,7 @@ const SubmissionsListPage: React.FC = () => {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [isJudge, setIsJudge] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -59,54 +60,83 @@ const SubmissionsListPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Fetch real submissions from backend
-      try {
-        // Get all hackathons first
-        const hackathonsResponse = await hackathonAPI.getAll();
-        const allHackathons = hackathonsResponse.data;
-        let allSubmissions: Submission[] = [];
+      if (!user) {
+        setSubmissions([]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fetch user roles first to determine if user is a judge
+      const currentUserRoles = await fetchUserRoles();
+      
+      // Check if user is a judge for any hackathon
+      const isJudge = currentUserRoles.some((role: UserRole) => role.role === 'JUDGE' && role.status === 'APPROVED');
+      setIsJudge(isJudge);
+      
+      if (isJudge) {
+        // For judges: Fetch primary submissions from all hackathons they're judging
+        const allSubmissions: any[] = [];
         
-        // Fetch submissions from all hackathons
-        for (const hackathon of allHackathons) {
+        // Get hackathons where user is an approved judge
+        const judgeHackathons = currentUserRoles
+          .filter((role: UserRole) => role.role === 'JUDGE' && role.status === 'APPROVED')
+          .map((role: UserRole) => role.hackathonId);
+        
+        for (const hackathonId of judgeHackathons) {
           try {
-            const response = await submissionAPI.getByHackathon(hackathon.id);
+            const response = await submissionAPI.getPrimarySubmissions(hackathonId);
             if (response.data && response.data.length > 0) {
-              const hackathonSubmissions = response.data.map((submission: any) => ({
-                id: submission.id,
-                title: submission.title || `Submission ${submission.id}`,
-                description: submission.description || 'No description available',
-                teamName: submission.team?.name || `Team ${submission.teamId}`,
-                hackathonId: hackathon.id,
-                hackathonName: hackathon.title || `Hackathon ${hackathon.id}`,
-                submittedAt: submission.submitTime || new Date().toISOString(),
-                projectUrl: submission.projectUrl,
-                filePath: submission.filePath
-              }));
-              allSubmissions = [...allSubmissions, ...hackathonSubmissions];
-              console.log(`✅ Found ${hackathonSubmissions.length} submissions in hackathon ${hackathon.id} (${hackathon.title})`);
+              allSubmissions.push(...response.data);
             }
-          } catch (hackathonError) {
-            console.log(`No submissions found for hackathon ${hackathon.id}`);
+          } catch (err) {
+            console.log(`No primary submissions found for hackathon ${hackathonId}`);
           }
         }
         
         if (allSubmissions.length > 0) {
-          setSubmissions(allSubmissions);
-          console.log(`📋 Total submissions found: ${allSubmissions.length}`);
+          const primarySubmissions = allSubmissions.map((submission: any) => ({
+            id: submission.id,
+            title: submission.title || `Submission ${submission.id}`,
+            description: submission.description || 'No description available',
+            teamName: submission.team?.name || `Team ${submission.teamId}`,
+            hackathonId: submission.hackathon?.id || submission.hackathonId,
+            hackathonName: submission.hackathon?.title || `Hackathon ${submission.hackathonId}`,
+            submittedAt: submission.submitTime || new Date().toISOString(),
+            projectUrl: submission.projectUrl,
+            filePath: submission.filePath
+          }));
+          setSubmissions(primarySubmissions);
+          console.log(`⭐ Found ${primarySubmissions.length} primary submissions for judge ${user.email}`);
         } else {
-          // If no real submissions found, show empty state
           setSubmissions([]);
         }
-        
-      } catch (err) {
-        console.error('Failed to fetch real submissions:', err);
-        setSubmissions([]); // Show empty state instead of mock data
+      } else {
+        // For participants: Fetch only current user's submissions
+        try {
+          const response = await submissionAPI.getByUser(user.id);
+          if (response.data && response.data.length > 0) {
+            const userSubmissions = response.data.map((submission: any) => ({
+              id: submission.id,
+              title: submission.title || `Submission ${submission.id}`,
+              description: submission.description || 'No description available',
+              teamName: submission.team?.name || `Team ${submission.teamId}`,
+              hackathonId: submission.hackathon?.id || submission.hackathonId,
+              hackathonName: submission.hackathon?.title || `Hackathon ${submission.hackathonId}`,
+              submittedAt: submission.submitTime || new Date().toISOString(),
+              projectUrl: submission.projectUrl,
+              filePath: submission.filePath
+            }));
+            setSubmissions(userSubmissions);
+            console.log(`📋 Found ${userSubmissions.length} submissions for user ${user.email}`);
+          } else {
+            setSubmissions([]);
+          }
+        } catch (err) {
+          console.error('Failed to fetch user submissions:', err);
+          setSubmissions([]);
+        }
       }
       
-      // Fetch user roles if logged in
-      if (user) {
-        await fetchUserRoles();
-      }
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
       setError('Failed to load submissions. Please try again.');
@@ -115,15 +145,15 @@ const SubmissionsListPage: React.FC = () => {
     }
   };
 
-  const fetchUserRoles = async () => {
+  const fetchUserRoles = async (): Promise<UserRole[]> => {
     try {
-      if (!user) return;
+      if (!user) return [];
       
       // Get all hackathons to check judge status for each
       const hackathonsResponse = await hackathonAPI.getAll();
       const allHackathons = hackathonsResponse.data;
       
-      const userRoles: UserRole[] = [];
+      const currentUserRoles: UserRole[] = [];
       
       // Check judge status for each hackathon
       for (const hackathon of allHackathons) {
@@ -137,7 +167,7 @@ const SubmissionsListPage: React.FC = () => {
           );
           
           if (userJudgeRequest) {
-            userRoles.push({
+            currentUserRoles.push({
               hackathonId: hackathon.id,
               role: 'JUDGE',
               status: userJudgeRequest.status // PENDING, APPROVED, REJECTED
@@ -148,13 +178,15 @@ const SubmissionsListPage: React.FC = () => {
         }
       }
       
-      console.log('🔍 User roles found:', userRoles);
-      setUserRoles(userRoles);
+      console.log('🔍 User roles found:', currentUserRoles);
+      setUserRoles(currentUserRoles);
+      return currentUserRoles;
       
     } catch (err: any) {
       console.error('Failed to fetch user roles:', err);
       // Don't show error for roles, just continue without judge permissions
       setUserRoles([]);
+      return [];
     }
   };
 
@@ -210,10 +242,13 @@ const SubmissionsListPage: React.FC = () => {
       <Box sx={{ textAlign: 'center', mb: 4 }}>
         <SubmissionIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
         <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          All Submissions
+          {isJudge ? 'Primary Submissions to Judge' : 'My Submissions'}
         </Typography>
         <Typography variant="h6" color="textSecondary">
-          Browse and judge hackathon submissions
+          {isJudge 
+            ? 'Review and score the primary submissions from teams' 
+            : 'Browse and manage your hackathon submissions'
+          }
         </Typography>
       </Box>
 

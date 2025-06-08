@@ -10,7 +10,7 @@ import java.time.Instant;
 import java.util.List;
 
 public interface HackathonService {
-    Hackathon createHackathon(String title, String description, Instant startDate, Instant endDate, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode);
+    Hackathon createHackathon(String title, String description, Instant startDate, Instant endDate, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode, boolean slackEnabled);
     List<Hackathon> getAllHackathons();
     void deleteHackathon(long hackathonId);
 

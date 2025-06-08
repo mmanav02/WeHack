@@ -82,6 +82,7 @@ const App: React.FC = () => {
                 <Route path="/create-hackathon" element={<CreateHackathonPage />} />
                 <Route path="/hackathons/:hackathonId/judge-requests" element={<Suspense fallback={<PageLoader />}><JudgeRequestsPage /></Suspense>} />
                 <Route path="/hackathons/:hackathonId/submissions/:submissionId/edit" element={<Suspense fallback={<PageLoader />}><EditSubmissionPage /></Suspense>} />
+                <Route path="/submissions/:submissionId/edit" element={<Suspense fallback={<PageLoader />}><EditSubmissionPage /></Suspense>} />
                 <Route path="/submissions" element={<Suspense fallback={<PageLoader />}><SubmissionsListPage /></Suspense>} />
                 <Route path="/submissions/:submissionId/score" element={<Suspense fallback={<PageLoader />}><SubmitScorePage /></Suspense>} />
                 <Route path="/hackathons/:hackathonId" element={<Suspense fallback={<PageLoader />}><HackathonDetailsPage /></Suspense>} />

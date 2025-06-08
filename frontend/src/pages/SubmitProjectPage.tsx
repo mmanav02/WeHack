@@ -166,14 +166,18 @@ const SubmitProjectPage: React.FC = () => {
       console.error('❌ Project submission failed:', err);
       
       // Handle specific error cases
-      if (err.response?.data?.includes('60 seconds')) {
+      const errorMessage = typeof err.response?.data === 'string' ? err.response.data : '';
+      
+      if (errorMessage.includes('60 seconds')) {
         setError('⏱️ Please wait 60 seconds before submitting again.');
-      } else if (err.response?.data?.includes('File upload failed')) {
+      } else if (errorMessage.includes('File upload failed')) {
         setError('File upload failed. Please try with a smaller file.');
-      } else if (err.response?.data?.includes('Team not found')) {
+      } else if (errorMessage.includes('Team not found')) {
         setError('You need to join the hackathon first. Please register for the hackathon.');
+      } else if (err.response?.status === 500) {
+        setError('Server error occurred. Please check the backend logs and try again.');
       } else {
-        setError(err.response?.data || err.message || 'Failed to submit project. Please try again.');
+        setError(err.response?.data?.message || err.message || 'Failed to submit project. Please try again.');
       }
     } finally {
       setLoading(false);

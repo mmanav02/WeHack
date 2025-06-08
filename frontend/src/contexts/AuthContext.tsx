@@ -10,8 +10,8 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string, password: string) => Promise<boolean>;
-  register: (userData: any) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  register: (userData: any) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   loading: boolean;
 }
@@ -48,7 +48,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
       const response = await authAPI.login({ email, password });
@@ -56,16 +56,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setUser(userData);
       localStorage.setItem('user', JSON.stringify(userData));
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('Login failed:', error);
-      return false;
+      
+      // Handle specific error responses from backend
+      if (error.response?.data?.error) {
+        return { success: false, error: error.response.data.error };
+      } else if (error.response?.status === 401) {
+        return { success: false, error: 'Invalid email or password. Please check your credentials and try again.' };
+      } else if (error.response?.status === 400) {
+        return { success: false, error: 'Please fill in all required fields.' };
+      } else {
+        return { success: false, error: 'Login failed. Please try again later.' };
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  const register = async (userData: any): Promise<boolean> => {
+  const register = async (userData: any): Promise<{ success: boolean; error?: string }> => {
     try {
       setLoading(true);
       const response = await authAPI.register(userData);
@@ -73,10 +83,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       setUser(newUser);
       localStorage.setItem('user', JSON.stringify(newUser));
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('Registration failed:', error);
-      return false;
+      
+      // Handle specific error responses from backend
+      if (error.response?.data?.error) {
+        return { success: false, error: error.response.data.error };
+      } else if (error.response?.status === 409) {
+        return { success: false, error: 'An account with this email already exists. Please use a different email or try logging in.' };
+      } else if (error.response?.status === 400) {
+        return { success: false, error: 'Please fill in all required fields correctly.' };
+      } else {
+        return { success: false, error: 'Registration failed. Please try again later.' };
+      }
     } finally {
       setLoading(false);
     }

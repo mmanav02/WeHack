@@ -47,7 +47,8 @@ public class HackathonController {
                 organizer,
                 request.getScoringMethod(),
                 request.getSmtpPassword(),
-                request.getMailMode()
+                request.getMailMode(),
+                request.isSlackEnabled()
         );
     }
 

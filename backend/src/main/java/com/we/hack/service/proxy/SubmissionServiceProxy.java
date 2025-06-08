@@ -101,4 +101,19 @@ public class SubmissionServiceProxy implements SubmissionService {
         return realSubmissionService.findById(submissionId);
     }
 
+    @Override
+    public List<Submission> findByUserId(Long userId) {
+        return realSubmissionService.findByUserId(userId);
+    }
+
+    @Override
+    public Submission setPrimarySubmission(Long submissionId, Long userId) {
+        return realSubmissionService.setPrimarySubmission(submissionId, userId);
+    }
+
+    @Override
+    public List<Submission> getPrimarySubmissionsByHackathon(int hackathonId) {
+        return realSubmissionService.getPrimarySubmissionsByHackathon(hackathonId);
+    }
+
 }

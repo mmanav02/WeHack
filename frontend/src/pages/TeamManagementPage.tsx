@@ -16,7 +16,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   IconButton,
   Tooltip,
   List,
@@ -31,7 +30,7 @@ import {
   Edit as EditIcon,
   Group as GroupIcon
 } from '@mui/icons-material';
-import { hackathonRegistrationAPI, authAPI } from '../services/api';
+import { hackathonRegistrationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
 interface Team {
@@ -59,9 +58,8 @@ const TeamManagementPage = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
-  const [showAddMemberDialog, setShowAddMemberDialog] = useState(false);
-  const [newMemberEmail, setNewMemberEmail] = useState('');
-  const [addingMember, setAddingMember] = useState(false);
+  const [showJoinTeamDialog, setShowJoinTeamDialog] = useState(false);
+  const [joiningTeam, setJoiningTeam] = useState(false);
 
   useEffect(() => {
     if (hackathonId) {
@@ -90,40 +88,25 @@ const TeamManagementPage = () => {
     }
   };
 
-  const handleAddMember = async () => {
-    if (!selectedTeam || !newMemberEmail.trim()) {
+  const handleJoinTeam = async () => {
+    if (!selectedTeam || !user) {
       return;
     }
 
     try {
-      setAddingMember(true);
+      setJoiningTeam(true);
       setError('');
       
-      console.log('Looking up user by email:', newMemberEmail);
+      console.log('Adding current user', user.id, 'to team:', selectedTeam.id);
+      await hackathonRegistrationAPI.addTeamMember(selectedTeam.id, user.id);
       
-      // Step 1: Find user by email
-      const userResponse = await authAPI.findUserByEmail(newMemberEmail.trim());
+      console.log('✅ Successfully joined team');
       
-      if (!userResponse.data) {
-        setError('User not found with that email address. Please check the email and try again.');
-        return;
-      }
-      
-      const foundUser = userResponse.data;
-      console.log('Found user:', foundUser);
-      
-      // Step 2: Add user to team
-      console.log('Adding user', foundUser.id, 'to team:', selectedTeam.id);
-      await hackathonRegistrationAPI.addTeamMember(selectedTeam.id, foundUser.id);
-      
-      console.log('✅ Successfully added member to team');
-      
-      // Step 3: Clear form and refresh teams
-      setNewMemberEmail('');
-      setShowAddMemberDialog(false);
+      // Close dialog
+      setShowJoinTeamDialog(false);
       
       // Show success message
-      setSuccess(`✅ Successfully added ${foundUser.username || foundUser.email} to ${selectedTeam.name}!`);
+      setSuccess(`✅ Successfully joined ${selectedTeam.name}!`);
       
       // Refresh teams to show updated member list
       await fetchTeams();
@@ -132,26 +115,29 @@ const TeamManagementPage = () => {
       setTimeout(() => setSuccess(''), 5000);
       
     } catch (err: any) {
-      console.error('Failed to add team member:', err);
-      if (err.response?.status === 404) {
-        setError('User not found with that email address. Please check the email and try again.');
-      } else {
-        setError('Failed to add team member. The user may already be in a team or an error occurred.');
-      }
+      console.error('Failed to join team:', err);
+      setError('Failed to join team. You may already be in a team or an error occurred.');
     } finally {
-      setAddingMember(false);
+      setJoiningTeam(false);
     }
   };
 
-  const handleOpenAddMember = (team: Team) => {
+  const handleOpenJoinTeam = (team: Team) => {
     setSelectedTeam(team);
-    setShowAddMemberDialog(true);
+    setShowJoinTeamDialog(true);
   };
 
-  const handleCloseAddMember = () => {
-    setShowAddMemberDialog(false);
+  const handleCloseJoinTeam = () => {
+    setShowJoinTeamDialog(false);
     setSelectedTeam(null);
-    setNewMemberEmail('');
+  };
+
+  const isUserInTeam = (team: Team) => {
+    return team.members?.some(member => member.id === user?.id) || false;
+  };
+
+  const isUserInAnyTeam = () => {
+    return teams.some(team => isUserInTeam(team));
   };
 
   if (loading) {
@@ -199,7 +185,7 @@ const TeamManagementPage = () => {
             Teams Overview
           </Typography>
           <Grid container spacing={3}>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <Box sx={{ textAlign: 'center', p: 2 }}>
                 <Typography variant="h3" color="primary.main" sx={{ fontWeight: 'bold' }}>
                   {teams.length}
@@ -209,23 +195,13 @@ const TeamManagementPage = () => {
                 </Typography>
               </Box>
             </Grid>
-            <Grid item xs={12} sm={4}>
+            <Grid item xs={12} sm={6}>
               <Box sx={{ textAlign: 'center', p: 2 }}>
                 <Typography variant="h3" color="success.main" sx={{ fontWeight: 'bold' }}>
                   {teams.reduce((acc, team) => acc + (team.members?.length || 0), 0)}
                 </Typography>
                 <Typography variant="body1" color="textSecondary">
                   Total Participants
-                </Typography>
-              </Box>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <Box sx={{ textAlign: 'center', p: 2 }}>
-                <Typography variant="h3" color="warning.main" sx={{ fontWeight: 'bold' }}>
-                  {Math.round(teams.reduce((acc, team) => acc + (team.members?.length || 0), 0) / teams.length || 0)}
-                </Typography>
-                <Typography variant="body1" color="textSecondary">
-                  Avg Team Size
                 </Typography>
               </Box>
             </Grid>
@@ -256,15 +232,20 @@ const TeamManagementPage = () => {
                     <Typography variant="h6" sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                       {team.name}
                     </Typography>
-                    <Tooltip title="Add Team Member">
-                      <IconButton 
-                        size="small" 
-                        onClick={() => handleOpenAddMember(team)}
-                        sx={{ color: 'primary.main' }}
-                      >
-                        <PersonAddIcon />
-                      </IconButton>
-                    </Tooltip>
+                    {user && !isUserInAnyTeam() && (
+                      <Tooltip title="Join Team">
+                        <IconButton 
+                          size="small" 
+                          onClick={() => handleOpenJoinTeam(team)}
+                          sx={{ color: 'primary.main' }}
+                        >
+                          <PersonAddIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {user && isUserInTeam(team) && (
+                      <Chip label="Your Team" size="small" color="success" />
+                    )}
                   </Box>
                   
                   <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
@@ -291,6 +272,7 @@ const TeamManagementPage = () => {
                           primary={
                             <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
                               {member.username}
+                              {member.id === user?.id && ' (You)'}
                             </Typography>
                           }
                           secondary={
@@ -317,57 +299,38 @@ const TeamManagementPage = () => {
         </Grid>
       )}
 
-      {/* Add Member Dialog */}
-      <Dialog open={showAddMemberDialog} onClose={handleCloseAddMember} maxWidth="sm" fullWidth>
+      {/* Join Team Dialog */}
+      <Dialog open={showJoinTeamDialog} onClose={handleCloseJoinTeam} maxWidth="sm" fullWidth>
         <DialogTitle>
-          Add Team Member
+          Join Team
           {selectedTeam && (
             <Typography variant="body2" color="textSecondary">
-              Adding to: {selectedTeam.name}
+              Join: {selectedTeam.name}
             </Typography>
           )}
         </DialogTitle>
         <DialogContent>
-          <TextField
-            autoFocus
-            margin="dense"
-            label="Member Email"
-            type="email"
-            fullWidth
-            variant="outlined"
-            value={newMemberEmail}
-            onChange={(e) => setNewMemberEmail(e.target.value)}
-            placeholder="Enter the email of the user to add"
-            sx={{ mt: 2 }}
-            error={!!error && error.includes('email')}
-            helperText={error && error.includes('email') ? error : ''}
-          />
-          <Typography variant="body2" color="textSecondary" sx={{ mt: 2 }}>
-            💡 <strong>How it works:</strong>
+          <Typography variant="body1" sx={{ mb: 2 }}>
+            Are you sure you want to join "{selectedTeam?.name}"?
           </Typography>
-          <Typography variant="body2" color="textSecondary" component="div" sx={{ mt: 1 }}>
-            <Box component="ul" sx={{ pl: 2, m: 0 }}>
-              <li>Enter the email of a registered user</li>
-              <li>They will be added to the team immediately</li>
-              <li>The user must have an account on the platform</li>
-              <li>Users can only be in one team per hackathon</li>
-            </Box>
+          <Typography variant="body2" color="textSecondary">
+            💡 <strong>Note:</strong> You can only be in one team per hackathon.
           </Typography>
         </DialogContent>
         <DialogActions>
-          <Button onClick={handleCloseAddMember}>Cancel</Button>
+          <Button onClick={handleCloseJoinTeam}>Cancel</Button>
           <Button 
-            onClick={handleAddMember} 
+            onClick={handleJoinTeam} 
             variant="contained"
-            disabled={!newMemberEmail.trim() || addingMember}
+            disabled={joiningTeam}
           >
-            {addingMember ? (
+            {joiningTeam ? (
               <>
                 <CircularProgress size={16} sx={{ mr: 1 }} />
-                Adding...
+                Joining...
               </>
             ) : (
-              'Add Member'
+              'Join Team'
             )}
           </Button>
         </DialogActions>

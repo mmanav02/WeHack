@@ -1,4 +1,4 @@
-import { Box, Typography, TextField, Button, Stack, Container, Link } from '@mui/material'
+import { Box, Typography, TextField, Button, Stack, Container, Link, Alert } from '@mui/material'
 import { Link as RouterLink, useNavigate, useLocation } from 'react-router-dom'
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -7,6 +7,7 @@ const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState<{[key: string]: string}>({});
   const { login, loading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -14,22 +15,42 @@ const LoginPage = () => {
   // Get the return URL from state or default to home page
   const returnTo = location.state?.returnTo || '/';
 
+  const validateForm = () => {
+    const errors: {[key: string]: string} = {};
+    
+    if (!email.trim()) {
+      errors.email = 'Email is required';
+    }
+    
+    if (!password) {
+      errors.password = 'Password is required';
+    }
+    
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError('');
+    setFieldErrors({});
+
+    if (!validateForm()) {
+      return;
+    }
 
     try {
-      const success = await login(email, password);
-      if (success) {
+      const result = await login(email, password);
+      if (result.success) {
         console.log('Login successful');
         navigate(returnTo); // Redirect to the return URL (home by default)
       } else {
-        setError('Login failed. Please check your credentials.');
+        setError(result.error || 'Login failed. Please check your credentials.');
       }
     } catch (err) {
       console.error('Login error:', err);
-      setError('Login failed. Invalid credentials.');
+      setError('An unexpected error occurred. Please try again.');
     }
   };
 
@@ -54,13 +75,14 @@ const LoginPage = () => {
             required
             fullWidth
             id="email"
-            label="Email Address or Username"
+            label="Email Address"
             name="email"
             autoComplete="email"
             variant="outlined"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            error={!!error}
+            error={!!fieldErrors.email}
+            helperText={fieldErrors.email}
           />
           <TextField
             required
@@ -73,9 +95,16 @@ const LoginPage = () => {
             variant="outlined"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            error={!!error}
+            error={!!fieldErrors.password}
+            helperText={fieldErrors.password}
           />
-          {error && <Typography color="error" align="center">{error}</Typography>}
+          
+          {error && (
+            <Alert severity="error" sx={{ mt: 2 }}>
+              {error}
+            </Alert>
+          )}
+          
           <Button 
             type="submit" 
             fullWidth 

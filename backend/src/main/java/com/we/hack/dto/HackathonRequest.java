@@ -15,4 +15,5 @@ public class HackathonRequest {
     private ScoringMethod scoringMethod;
     private String smtpPassword;
     private MailModes mailMode;
+    private boolean slackEnabled;
 }

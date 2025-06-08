@@ -23,5 +23,19 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
 
     List<Submission> findByHackathonId(int HackathonId);
     
+    List<Submission> findByUserId(Long userId);
+    
     void deleteByHackathonId(int hackathonId);
+    
+    // Find primary submission for a team in a specific hackathon
+    Optional<Submission> findByTeamIdAndHackathonIdAndIsPrimaryTrue(Long teamId, Long hackathonId);
+    
+    // Find all primary submissions for a hackathon (for judges)
+    List<Submission> findByHackathonIdAndIsPrimaryTrue(int hackathonId);
+    
+    // Update primary status - set all submissions for a team to non-primary
+    @Modifying
+    @Transactional
+    @Query("UPDATE Submission s SET s.isPrimary = false WHERE s.team.id = :teamId AND s.hackathon.id = :hackathonId")
+    void clearPrimaryForTeamInHackathon(@Param("teamId") Long teamId, @Param("hackathonId") Long hackathonId);
 }

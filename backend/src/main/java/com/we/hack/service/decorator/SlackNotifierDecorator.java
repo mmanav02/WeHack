@@ -33,8 +33,8 @@ public class SlackNotifierDecorator extends NotifierDecorator {
 
     private void sendSlackMessage(String message) {
         try {
-            if (slackWebhookUrl == null || slackWebhookUrl.isBlank()) {
-                System.err.println("Slack webhook URL is not set. Skipping Slack notification.");
+            if (slackWebhookUrl == null || slackWebhookUrl.isBlank() || slackWebhookUrl.contains("YOUR/SLACK/WEBHOOK")) {
+                System.err.println("Slack webhook URL is not properly configured. Skipping Slack notification.");
                 return;
             }
 
@@ -44,7 +44,7 @@ public class SlackNotifierDecorator extends NotifierDecorator {
             conn.setDoOutput(true);
             conn.setRequestProperty("Content-Type", "application/json");
 
-            String payload = "{\"text\":\"" + message.replace("\"", "\\\"") + "\"}";
+            String payload = "{\"text\":\"" + message.replace("\"", "\\\"").replace("\n", "\\n") + "\"}";
 
             try (OutputStream os = conn.getOutputStream()) {
                 os.write(payload.getBytes());
@@ -52,11 +52,14 @@ public class SlackNotifierDecorator extends NotifierDecorator {
             }
 
             int responseCode = conn.getResponseCode();
-            if (responseCode != 200) {
+            if (responseCode == 200) {
+                System.out.println("Slack notification sent successfully");
+            } else {
                 System.err.println("Slack notification failed with code: " + responseCode);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Failed to send Slack notification: " + e.getMessage());
+            // Don't re-throw - graceful degradation
         }
     }
 }

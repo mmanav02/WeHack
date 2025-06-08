@@ -9,9 +9,6 @@ import com.we.hack.model.*;
 import com.we.hack.repository.*;
 import com.we.hack.service.HackathonService;
 import com.we.hack.service.adapter.MailServiceAdapter;
-import com.we.hack.service.adapter.MailgunAdapter;
-import com.we.hack.service.adapter.NullMailServiceAdapter;
-import com.we.hack.service.adapter.OrganizerMailAdapter;
 import com.we.hack.service.factory.HackathonRoleFactory;
 import com.we.hack.service.iterator.CollectionFactory;
 import com.we.hack.service.iterator.Iterator;
@@ -52,13 +49,7 @@ public class HackathonServiceImpl implements HackathonService {
     private SubmissionRepository submissionRepository;
 
     @Autowired
-    private MailgunAdapter mailgunAdapter;
-
-    @Autowired
-    private NullMailServiceAdapter nullMailServiceAdapter;
-
-    @Autowired
-    private OrganizerMailAdapter organizerMailAdapter;
+    private MailServiceAdapter mailServiceAdapter;
 
     @Autowired
     private JudgeScoreRepository judgeScoreRepository;
@@ -73,7 +64,7 @@ public class HackathonServiceImpl implements HackathonService {
     private ApplicationContext applicationContext;
 
     @Override
-    public Hackathon createHackathon(String title, String description, Instant startDate, Instant endDate, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode) {
+    public Hackathon createHackathon(String title, String description, Instant startDate, Instant endDate, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode, boolean slackEnabled) {
         if(mailMode == MailModes.ORGANIZED) {
             User organizerFetch = userRepository.getReferenceById((long) organizer.getId());
             organizerFetch.setSmtpPassword(smtpPassword);
@@ -89,6 +80,7 @@ public class HackathonServiceImpl implements HackathonService {
         hackathon.setScoringMethod(scoringMethod);
         hackathon.setStatus("Draft");
         hackathon.setMailMode(mailMode);
+        hackathon.setSlackEnabled(slackEnabled);
         return hackathonRepository.save(hackathon);
     }
 
@@ -295,9 +287,9 @@ public class HackathonServiceImpl implements HackathonService {
         MailModes mailMode = hackathon.getMailMode() != null ? hackathon.getMailMode() : MailModes.NONE;
         
         MailServiceAdapter adapter = switch (mailMode) {
-            case ORGANIZED -> organizerMailAdapter;
-            case MAILGUN -> mailgunAdapter;
-            case NONE -> nullMailServiceAdapter;
+            case ORGANIZED -> mailServiceAdapter;
+            case MAILGUN -> mailServiceAdapter;
+            case NONE -> mailServiceAdapter;
         };
 
         if (status.equals(ApprovalStatus.APPROVED)) {
