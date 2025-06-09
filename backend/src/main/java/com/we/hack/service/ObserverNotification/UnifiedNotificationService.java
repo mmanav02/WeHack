@@ -1,4 +1,4 @@
-package com.we.hack.service.notification;
+package com.we.hack.service.ObserverNotification;
 
 import com.we.hack.model.Hackathon;
 import com.we.hack.model.User;
@@ -16,15 +16,6 @@ import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-/**
- * Unified Notification Service Implementation
- * Combines Decorator Pattern (for multi-channel notifications) 
- * with Observer Pattern (for broadcasting to multiple recipients)
- * Uses Factory Pattern to dynamically select MailServiceAdapter based on hackathon MailMode
- * 
- * This service completely replaces the old observer package functionality with a comprehensive solution.
- * The observer package files are kept for legacy reference but are no longer used.
- */
 @Service
 public class UnifiedNotificationService implements NotificationService {
 
@@ -43,8 +34,7 @@ public class UnifiedNotificationService implements NotificationService {
     
     @Autowired
     private ApplicationContext applicationContext;
-    
-    // Observer registry: hackathonId -> List of (observerEmail, organizer) pairs
+
     private final Map<Integer, List<ObserverEntry>> observerRegistry = new ConcurrentHashMap<>();
     
     /**
@@ -98,19 +88,16 @@ public class UnifiedNotificationService implements NotificationService {
         }
         
         try {
-            // Create appropriate MailServiceAdapter based on hackathon's MailMode using Factory Pattern
             if (logger != null) {
                 logger.DEBUG("Creating MailServiceAdapter using factory for MailMode: " + hackathon.getMailMode());
             }
             MailServiceAdapter mailServiceAdapter = mailServiceAdapterFactory.createAdapter(hackathon);
-            
-            // Start with base email notifier using the dynamically created adapter
+
             if (logger != null) {
                 logger.DEBUG("Creating base EmailNotifier with adapter: " + mailServiceAdapter.getClass().getSimpleName());
             }
             Notifier notifier = new EmailNotifier(mailServiceAdapter);
-            
-            // Apply Slack decorator if enabled for this hackathon
+
             if (hackathon.isSlackEnabled()) {
                 try {
                     if (logger != null) {
@@ -127,15 +114,13 @@ public class UnifiedNotificationService implements NotificationService {
                         logger.ERROR("Failed to initialize Slack decorator: " + e.getMessage());
                         logger.WARN("Continuing with email-only notification");
                     }
-                    // Continue with email-only notification
                 }
             } else {
                 if (logger != null) {
                     logger.DEBUG("Slack notifications disabled for hackathon: " + hackathon.getTitle());
                 }
             }
-            
-            // Send notification through the decorator chain
+
             if (logger != null) {
                 logger.DEBUG("Sending notification through decorator chain using " + notifier.getClass().getSimpleName());
             }
@@ -174,8 +159,7 @@ public class UnifiedNotificationService implements NotificationService {
             if (logger != null) {
                 logger.INFO("Broadcasting to " + observers.size() + " observers for hackathon: " + hackathon.getTitle() + " using MailMode: " + hackathon.getMailMode());
             }
-            
-            // Create enhanced observers that use decorator pattern with dynamic adapter selection
+
             int successCount = 0;
             for (ObserverEntry entry : observers) {
                 try {
@@ -190,7 +174,6 @@ public class UnifiedNotificationService implements NotificationService {
                     if (logger != null) {
                         logger.ERROR("Failed to notify observer: " + entry.email + ", error: " + e.getMessage());
                     }
-                    // Continue with other observers
                 }
             }
             
@@ -215,7 +198,6 @@ public class UnifiedNotificationService implements NotificationService {
         }
         
         try {
-            // Check if observer is already registered
             List<ObserverEntry> existingObservers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList());
             boolean alreadyRegistered = existingObservers.stream()
                     .anyMatch(entry -> entry.email.equals(observerEmail));
@@ -267,10 +249,7 @@ public class UnifiedNotificationService implements NotificationService {
             throw e;
         }
     }
-    
-    /**
-     * Clear observers for a hackathon (useful for cleanup)
-     */
+
     public void clearObservers(int hackathonId) {
         if (logger != null) {
             logger.INFO("UnifiedNotificationService.clearObservers() - Clearing observers for hackathon: " + hackathonId);
@@ -290,10 +269,7 @@ public class UnifiedNotificationService implements NotificationService {
             throw e;
         }
     }
-    
-    /**
-     * Get observer count for a hackathon
-     */
+
     public int getObserverCount(int hackathonId) {
         if (logger != null) {
             logger.DEBUG("UnifiedNotificationService.getObserverCount() - Getting observer count for hackathon: " + hackathonId);

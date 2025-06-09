@@ -7,9 +7,9 @@
  * 
  * <h2>Key Components:</h2>
  * <ul>
- *   <li>{@link com.we.hack.service.notification.UnifiedNotificationService} - Main notification service</li>
- *   <li>{@link com.we.hack.service.notification.NotificationService} - Service interface</li>
- *   <li>{@link com.we.hack.service.notification.HackathonObserver} - Observer interface (replaces observer package version)</li>
+ *   <li>{@link com.we.hack.service.ObserverNotification.UnifiedNotificationService} - Main notification service</li>
+ *   <li>{@link com.we.hack.service.ObserverNotification.NotificationService} - Service interface</li>
+ *   <li>{@link com.we.hack.service.ObserverNotification.HackathonObserver} - Observer interface (replaces observer package version)</li>
  * </ul>
  * 
  * <h2>Design Patterns Implemented:</h2>
@@ -46,4 +46,4 @@
  * @version 2.0
  * @since 1.0
  */
-package com.we.hack.service.notification; 
+package com.we.hack.service.ObserverNotification;

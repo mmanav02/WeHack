@@ -13,7 +13,7 @@ import com.we.hack.service.factory.HackathonRoleFactory;
 import com.we.hack.service.iterator.CollectionFactory;
 import com.we.hack.service.iterator.Iterator;
 import com.we.hack.service.logger.Logger;
-import com.we.hack.service.notification.UnifiedNotificationService;
+import com.we.hack.service.ObserverNotification.UnifiedNotificationService;
 import com.we.hack.service.state.*;
 import com.we.hack.service.template.BuildPhaseScoreboard;
 import com.we.hack.service.template.JudgingPhaseScoreboard;

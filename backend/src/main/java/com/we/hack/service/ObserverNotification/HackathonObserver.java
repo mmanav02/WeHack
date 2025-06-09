@@ -1,4 +1,4 @@
-package com.we.hack.service.notification;
+package com.we.hack.service.ObserverNotification;
 
 /**
  * Observer interface for hackathon notifications

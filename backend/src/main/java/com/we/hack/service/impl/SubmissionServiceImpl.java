@@ -16,25 +16,18 @@ import com.we.hack.service.builder.Submission.SubmissionBuilder;
 import com.we.hack.service.builder.Submission.ConcreteSubmissionBuilder;
 import com.we.hack.service.iterator.CollectionFactory;
 import com.we.hack.service.iterator.Iterator;
-import com.we.hack.service.decorator.EmailNotifier;
-import com.we.hack.service.decorator.Notifier;
-import com.we.hack.service.decorator.SlackNotifierDecorator;
 import com.we.hack.service.logger.Logger;
 import com.we.hack.service.memento.SubmissionHistoryManager;
 import com.we.hack.service.memento.SubmissionMemento;
-import com.we.hack.service.notification.UnifiedNotificationService;
-import jakarta.annotation.PostConstruct;
+import com.we.hack.service.ObserverNotification.UnifiedNotificationService;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.time.Instant;
-import java.util.*;
 import java.util.ArrayList;
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.we.hack.service.notification;
+package com.we.hack.service.ObserverNotification;
 
 import com.we.hack.model.Hackathon;
 import com.we.hack.model.User;
