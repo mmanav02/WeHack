@@ -56,7 +56,6 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Autowired
     private CollectionFactory collectionFactory;
 
-    @Qualifier("nullMailServiceAdapter")
     @Autowired
     private MailServiceAdapter mailServiceAdapter;
 

@@ -9,7 +9,7 @@ const CreateHackathonPage: React.FC = () => {
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
-  const [mailMode, setMailMode] = useState('NONE');
+  const [mailMode, setMailMode] = useState('MAILGUN');
   const [smtpPassword, setSmtpPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -67,7 +67,7 @@ const CreateHackathonPage: React.FC = () => {
       setDescription('');
       setStartDate('');
       setEndDate('');
-      setMailMode('NONE');
+      setMailMode('MAILGUN'); // Default to Mailgun (recommended)
       setSmtpPassword('');
     } catch (err) {
       console.error('Error creating hackathon:', err);
@@ -143,19 +143,19 @@ const CreateHackathonPage: React.FC = () => {
                       </Typography>
                     </Box>
                   </MenuItem>
+                  <MenuItem value="MAILGUN">
+                    <Box>
+                      <Typography variant="body1">Mailgun Service ⭐ Recommended</Typography>
+                      <Typography variant="caption" color="textSecondary">
+                        Professional email delivery service
+                      </Typography>
+                    </Box>
+                  </MenuItem>
                   <MenuItem value="ORGANIZED">
                     <Box>
                       <Typography variant="body1">Gmail (Your Account)</Typography>
                       <Typography variant="caption" color="textSecondary">
                         Use your Gmail account to send notifications
-                      </Typography>
-                    </Box>
-                  </MenuItem>
-                  <MenuItem value="MAILGUN">
-                    <Box>
-                      <Typography variant="body1">Mailgun Service</Typography>
-                      <Typography variant="caption" color="textSecondary">
-                        Use configured Mailgun service
                       </Typography>
                     </Box>
                   </MenuItem>
@@ -199,8 +199,17 @@ const CreateHackathonPage: React.FC = () => {
               {mailMode === 'MAILGUN' && (
                 <Alert severity="info" sx={{ mt: 2 }}>
                   <Typography variant="body2">
-                    <strong>Mailgun Service:</strong> Uses the configured Mailgun API for reliable email delivery.
-                    No additional setup required.
+                    <strong>Mailgun Service:</strong> Uses our configured Mailgun API for reliable, professional email delivery.
+                    All judge notifications and hackathon updates will be sent automatically.
+                  </Typography>
+                </Alert>
+              )}
+
+              {mailMode === 'NONE' && (
+                <Alert severity="warning" sx={{ mt: 2 }}>
+                  <Typography variant="body2">
+                    <strong>No Email Notifications:</strong> Judges and participants will not receive email updates 
+                    about hackathon status changes. Consider using Mailgun for better communication.
                   </Typography>
                 </Alert>
               )}
