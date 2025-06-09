@@ -283,16 +283,11 @@ export class UICollectionFactory {
    */
   static hackathons(rawData: any[], currentUserId?: number): HackathonCollection {
     const hackathonItems: HackathonUIItem[] = rawData.map(hackathon => {
-      // DEBUG: Log each hackathon to understand the data structure
-      console.log(`🔍 Processing hackathon ${hackathon.id}: title="${hackathon.title}", status="${hackathon.status}"`);
-      
       // Use the original title if it exists and is meaningful, otherwise generate fallback
       let displayName = hackathon.title;
       if (!displayName || displayName.trim() === '' || displayName.match(/^Hackathon \d+$/)) {
         const status = hackathon.status || 'Draft';
         const id = hackathon.id;
-        
-        console.log(`📝 Generating fallback name for hackathon ${id} with status ${status}`);
         
         switch (status) {
           case 'Published':
@@ -308,8 +303,6 @@ export class UICollectionFactory {
             displayName = `Draft Hackathon ${id}`;
             break;
         }
-      } else {
-        console.log(`✅ Using original title "${displayName}" for hackathon ${hackathon.id}`);
       }
 
       return {

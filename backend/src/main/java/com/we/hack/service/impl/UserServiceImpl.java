@@ -2,6 +2,7 @@ package com.we.hack.service.impl;
 import com.we.hack.model.User;
 import com.we.hack.repository.UserRepository;
 import com.we.hack.service.UserService;
+import com.we.hack.service.logger.Logger;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -9,31 +10,97 @@ import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
+    
+    private static Logger logger;
+    
+    static {
+        try {
+            logger = Logger.getInstance(100);
+        } catch (IOException e) {
+            System.err.println("Failed to initialize logger: " + e.getMessage());
+        }
+    }
+    
     private final UserRepository userRepository;
 
     public UserServiceImpl(UserRepository userRepository) {
         this.userRepository = userRepository;
+        logger.INFO("UserServiceImpl initialized with repository");
     }
 
     @Override
     public User registerUser(User user) throws IOException {
-//        Logger logger = Logger.getInstance(50);
-//        logger.INFO("Registering new user");
-        return userRepository.save(user); // hash password here
+        logger.INFO("UserService.registerUser() - Registering new user with email: " + user.getEmail());
+        logger.DEBUG("User details: username=" + user.getUsername() + ", email=" + user.getEmail());
+        
+        try {
+            // Check if user already exists
+            Optional<User> existingUser = userRepository.findByEmail(user.getEmail());
+            if (existingUser.isPresent()) {
+                logger.WARN("User registration failed - email already exists: " + user.getEmail());
+                throw new RuntimeException("User with this email already exists");
+            }
+            
+            logger.DEBUG("Email validation passed - proceeding with user registration");
+            
+            // TODO: Hash password here in production
+            User savedUser = userRepository.save(user);
+            logger.INFO("User registered successfully with ID: " + savedUser.getId() + ", email: " + savedUser.getEmail());
+            
+            return savedUser;
+            
+        } catch (Exception e) {
+            logger.ERROR("Failed to register user - email: " + user.getEmail() + ", error: " + e.getMessage());
+            logger.SEVERE("Stack trace: " + e.toString());
+            throw e;
+        }
     }
 
     @Override
     public User loginUser(String email, String password){
-        Optional<User> user = userRepository.findByEmail(email);
-        if(user.isPresent() && user.get().getPassword().equals(password)) {
-            return user.get();
+        logger.INFO("UserService.loginUser() - Login attempt for email: " + email);
+        logger.DEBUG("Attempting authentication for user: " + email);
+        
+        try {
+            Optional<User> user = userRepository.findByEmail(email);
+            if(user.isPresent()) {
+                logger.DEBUG("User found in database: " + email);
+                
+                if (user.get().getPassword().equals(password)) {
+                    logger.INFO("Login successful for user: " + email + " (ID: " + user.get().getId() + ")");
+                    return user.get();
+                } else {
+                    logger.WARN("Login failed - invalid password for email: " + email);
+                    throw new RuntimeException("Invalid credentials");
+                }
+            } else {
+                logger.WARN("Login failed - user not found with email: " + email);
+                throw new RuntimeException("Invalid credentials");
+            }
+            
+        } catch (Exception e) {
+            logger.ERROR("Login error for email: " + email + ", error: " + e.getMessage());
+            throw e;
         }
-        throw new RuntimeException("Invalid credentials");
     }
 
     @Override
     public User findByEmail(String email) {
-        Optional<User> user = userRepository.findByEmail(email);
-        return user.orElse(null);
+        logger.INFO("UserService.findByEmail() - Finding user with email: " + email);
+        
+        try {
+            Optional<User> user = userRepository.findByEmail(email);
+            if (user.isPresent()) {
+                logger.DEBUG("User found: " + user.get().getUsername() + " (ID: " + user.get().getId() + ")");
+                return user.get();
+            } else {
+                logger.DEBUG("User not found with email: " + email);
+                return null;
+            }
+            
+        } catch (Exception e) {
+            logger.ERROR("Failed to find user by email: " + email + ", error: " + e.getMessage());
+            throw e;
+        }
     }
 }
