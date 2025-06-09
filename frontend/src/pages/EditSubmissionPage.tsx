@@ -67,7 +67,7 @@ const EditSubmissionPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Builder pattern state
+  // Builder pattern state - Initialize as null, will be set when submission data is loaded
   const [submissionBuilder, setSubmissionBuilder] = useState<SubmissionBuilder | null>(null);
 
   // Form state

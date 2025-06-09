@@ -13,6 +13,11 @@ public class ConcreteSubmissionBuilder implements SubmissionBuilder {
     private boolean isDraft = false;
     private boolean isTeamSubmission = true; // Default to team submission
 
+    public ConcreteSubmissionBuilder() {
+        // Initialize isPrimary to false by default to prevent null values
+        submission.setPrimary(false);
+    }
+
     @Override
     public SubmissionBuilder team(Team t) {
         submission.setTeam(t);

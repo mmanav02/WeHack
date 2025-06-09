@@ -31,7 +31,7 @@ public class Submission {
     private String filePath;
 
     @Column(name = "is_primary")
-    private boolean isPrimary = false;
+    private Boolean isPrimary = false;
 
     @ManyToOne
     @JoinColumn(name = "user_id")
@@ -64,5 +64,20 @@ public class Submission {
 
     public void accept(AnalyticsVisitor visitor){
         visitor.visit(this);
+    }
+
+    /**
+     * Helper method to safely get isPrimary as primitive boolean
+     * @return true if isPrimary is Boolean.TRUE, false otherwise (including null)
+     */
+    public boolean isPrimarySubmission() {
+        return Boolean.TRUE.equals(isPrimary);
+    }
+
+    /**
+     * Helper method to safely set isPrimary 
+     */
+    public void setPrimary(boolean primary) {
+        this.isPrimary = primary;
     }
 }

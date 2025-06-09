@@ -37,13 +37,6 @@ const SubmitProjectPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
-  // Builder pattern state
-  const [submissionBuilder, setSubmissionBuilder] = useState<SubmissionBuilder>(() => 
-    createSubmissionBuilder()
-      .forHackathon(parseInt(hackathonId!))
-      .byUser(user?.id || 0)
-  );
-
   const [loading, setLoading] = useState(false);
   const [draftSaving, setDraftSaving] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -58,32 +51,43 @@ const SubmitProjectPage: React.FC = () => {
   // Form validation states
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
+  // Handle navigation when user is not authenticated
   useEffect(() => {
-    if (!user) {
-      navigate('/login', { state: { returnTo: `/hackathons/${hackathonId}/submit-project` } });
-    } else if (hackathonId) {
-      // Update builder with correct user ID
-      setSubmissionBuilder(prev => prev.byUser(user.id));
+    if (user === null) {
+      const timer = setTimeout(() => {
+        navigate('/login', { state: { returnTo: `/hackathons/${hackathonId}/submit-project` } });
+      }, 100);
+      return () => clearTimeout(timer);
     }
-  }, [user, hackathonId, navigate]);
+  }, [user, navigate, hackathonId]);
 
-  // Update builder when form fields change
-  useEffect(() => {
-    setSubmissionBuilder(prev => prev
-      .title(title)
-      .description(description)
-      .projectUrl(projectUrl)
-    );
+  // Helper function to create a submission builder with current form data
+  const createCurrentSubmissionBuilder = (): SubmissionBuilder => {
+    const builder = createSubmissionBuilder();
     
-    if (file) {
-      setSubmissionBuilder(prev => prev.file(file));
+    if (user?.id && hackathonId) {
+      builder.forHackathon(parseInt(hackathonId)).byUser(user.id);
     }
-  }, [title, description, projectUrl, file]);
+    
+    if (title) builder.title(title);
+    if (description) builder.description(description);
+    if (projectUrl) builder.projectUrl(projectUrl);
+    if (file) builder.file(file);
+    
+    return builder;
+  };
 
   const validateForm = () => {
-    const validation = submissionBuilder.asFinalSubmission().validate();
-    setValidationErrors(validation.errors);
-    return validation.isValid;
+    try {
+      const submissionBuilder = createCurrentSubmissionBuilder();
+      const validation = submissionBuilder.asFinalSubmission().validate();
+      setValidationErrors(validation.errors);
+      return validation.isValid;
+    } catch (error) {
+      console.error('Validation error:', error);
+      setValidationErrors(['Validation failed. Please check your inputs.']);
+      return false;
+    }
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -95,7 +99,14 @@ const SubmitProjectPage: React.FC = () => {
   };
 
   const handleSaveDraft = async () => {
-    if (!user || !hackathonId || !submissionBuilder.hasMinimumData()) {
+    if (!user || !hackathonId) {
+      setError('Missing user or hackathon information');
+      return;
+    }
+
+    const submissionBuilder = createCurrentSubmissionBuilder();
+    
+    if (!submissionBuilder.hasMinimumData()) {
       setError('Please add some content before saving draft');
       return;
     }
@@ -139,6 +150,7 @@ const SubmitProjectPage: React.FC = () => {
     try {
       console.log('🚀 Submitting final project...');
       
+      const submissionBuilder = createCurrentSubmissionBuilder();
       const finalBuilder = submissionBuilder.asFinalSubmission();
       const formData = finalBuilder.build();
       
@@ -173,6 +185,11 @@ const SubmitProjectPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Helper function to check if we have minimum data for draft saving
+  const hasMinimumData = () => {
+    return title.trim() || description.trim() || projectUrl.trim() || file;
   };
 
   if (!user) {
@@ -368,7 +385,7 @@ const SubmitProjectPage: React.FC = () => {
                     variant="outlined"
                     startIcon={<SaveIcon />}
                     onClick={handleSaveDraft}
-                    disabled={loading || draftSaving || !submissionBuilder.hasMinimumData()}
+                    disabled={loading || draftSaving || !hasMinimumData()}
                     sx={{ px: 3 }}
                   >
                     {draftSaving ? 'Saving...' : 'Save Draft'}
@@ -379,7 +396,7 @@ const SubmitProjectPage: React.FC = () => {
                     type="submit"
                     variant="contained"
                     size="large"
-                    disabled={loading || !validateForm()}
+                    disabled={loading}
                     startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
                     sx={{
                       px: 6,
