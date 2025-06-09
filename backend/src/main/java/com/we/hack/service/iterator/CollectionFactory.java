@@ -29,7 +29,7 @@ public class CollectionFactory {
         return new TeamCollection(teams);
     }
     public HackathonCollection hackathons() {
-        return new HackathonCollection(hackathonRepository.findAll());
+        return new HackathonCollection(hackathonRepository.findAllOrderByIdDesc());
     }
 
     public SubmissionCollection submissions(Team team, Hackathon hackathon) {

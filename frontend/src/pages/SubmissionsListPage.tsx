@@ -23,18 +23,8 @@ import {
 } from '@mui/icons-material';
 import { submissionAPI, hackathonRoleAPI, hackathonAPI, hackathonRegistrationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-
-interface Submission {
-  id: number;
-  title: string;
-  description: string;
-  teamName?: string;
-  hackathonId?: number;
-  hackathonName?: string;
-  submittedAt?: string;
-  projectUrl?: string;
-  filePath?: string;
-}
+import { createSubmissionCollection, createParticipantCollection } from '../utils/UICollectionFactory';
+import type { SubmissionCollection, SubmissionUIItem, ParticipantCollection } from '../utils/UICollectionFactory';
 
 interface UserRole {
   hackathonId: number;
@@ -46,7 +36,7 @@ const SubmissionsListPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  const [submissionCollection, setSubmissionCollection] = useState<SubmissionCollection | null>(null);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -61,7 +51,7 @@ const SubmissionsListPage: React.FC = () => {
       setLoading(true);
       
       if (!user) {
-        setSubmissions([]);
+        setSubmissionCollection(null);
         setLoading(false);
         return;
       }
@@ -73,69 +63,57 @@ const SubmissionsListPage: React.FC = () => {
       const isJudge = currentUserRoles.some((role: UserRole) => role.role === 'JUDGE' && role.status === 'APPROVED');
       setIsJudge(isJudge);
       
+      // Fetch submissions and create collection using Factory pattern
+      let submissionData: any[] = [];
+      let userRole: string | undefined;
+
       if (isJudge) {
-        // For judges: Fetch primary submissions from all hackathons they're judging
-        const allSubmissions: any[] = [];
-        
-        // Get hackathons where user is an approved judge
-        const judgeHackathons = currentUserRoles
-          .filter((role: UserRole) => role.role === 'JUDGE' && role.status === 'APPROVED')
-          .map((role: UserRole) => role.hackathonId);
-        
-        for (const hackathonId of judgeHackathons) {
-          try {
-            const response = await submissionAPI.getPrimarySubmissions(hackathonId);
-            if (response.data && response.data.length > 0) {
-              allSubmissions.push(...response.data);
+        // Fetch all submissions if user is a judge
+        try {
+          const hackathonsResponse = await hackathonAPI.getAll();
+          const allHackathons = hackathonsResponse.data;
+          
+          // Get submissions from all hackathons where user is an approved judge
+          for (const hackathon of allHackathons) {
+            const userJudgeRole = currentUserRoles.find(role => 
+              role.hackathonId === hackathon.id && 
+              role.role === 'JUDGE' && 
+              role.status === 'APPROVED'
+            );
+            
+            if (userJudgeRole) {
+              try {
+                const submissionsResponse = await submissionAPI.getByHackathon(hackathon.id);
+                const hackathonSubmissions = submissionsResponse.data.map((sub: any) => ({
+                  ...sub,
+                  hackathonName: hackathon.title
+                }));
+                submissionData.push(...hackathonSubmissions);
+              } catch (err) {
+                console.log(`No submissions found for hackathon ${hackathon.id}`);
+              }
             }
-          } catch (err) {
-            console.log(`No primary submissions found for hackathon ${hackathonId}`);
           }
-        }
-        
-        if (allSubmissions.length > 0) {
-          const primarySubmissions = allSubmissions.map((submission: any) => ({
-            id: submission.id,
-            title: submission.title || `Submission ${submission.id}`,
-            description: submission.description || 'No description available',
-            teamName: submission.team?.name || `Team ${submission.teamId}`,
-            hackathonId: submission.hackathon?.id || submission.hackathonId,
-            hackathonName: submission.hackathon?.title || `Hackathon ${submission.hackathonId}`,
-            submittedAt: submission.submitTime || new Date().toISOString(),
-            projectUrl: submission.projectUrl,
-            filePath: submission.filePath
-          }));
-          setSubmissions(primarySubmissions);
-          console.log(`⭐ Found ${primarySubmissions.length} primary submissions for judge ${user.email}`);
-        } else {
-          setSubmissions([]);
+          userRole = 'JUDGE';
+        } catch (err) {
+          console.error('Failed to fetch judge submissions:', err);
         }
       } else {
-        // For participants: Fetch only current user's submissions
+        // Fetch user's own submissions
         try {
           const response = await submissionAPI.getByUser(user.id);
-          if (response.data && response.data.length > 0) {
-            const userSubmissions = response.data.map((submission: any) => ({
-              id: submission.id,
-              title: submission.title || `Submission ${submission.id}`,
-              description: submission.description || 'No description available',
-              teamName: submission.team?.name || `Team ${submission.teamId}`,
-              hackathonId: submission.hackathon?.id || submission.hackathonId,
-              hackathonName: submission.hackathon?.title || `Hackathon ${submission.hackathonId}`,
-              submittedAt: submission.submitTime || new Date().toISOString(),
-              projectUrl: submission.projectUrl,
-              filePath: submission.filePath
-            }));
-            setSubmissions(userSubmissions);
-            console.log(`📋 Found ${userSubmissions.length} submissions for user ${user.email}`);
-          } else {
-            setSubmissions([]);
-          }
+          submissionData = response.data;
+          userRole = 'PARTICIPANT';
         } catch (err) {
           console.error('Failed to fetch user submissions:', err);
-          setSubmissions([]);
         }
       }
+
+      // Create submission collection using Factory pattern
+      const collection = createSubmissionCollection(submissionData, user.id, userRole);
+      setSubmissionCollection(collection);
+      
+      console.log(`📊 Loaded ${collection.count} submissions using Factory pattern (Role: ${userRole})`);
       
     } catch (err: any) {
       console.error('Failed to fetch data:', err);
@@ -206,70 +184,120 @@ const SubmissionsListPage: React.FC = () => {
     navigate(`/submissions/${submissionId}`);
   };
 
+  const handleEditSubmission = (submissionId: number) => {
+    navigate(`/submissions/${submissionId}/edit`);
+  };
+
   const handleJudgeSubmission = (submissionId: number) => {
-    navigate(`/submissions/${submissionId}/score`);
+    navigate(`/submissions/${submissionId}/judge`);
   };
 
   if (loading) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 8, mb: 4 }}>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '50vh' }}>
-          <CircularProgress size={40} />
+          <CircularProgress size={60} />
           <Typography variant="h6" sx={{ ml: 2 }}>
-            Loading submissions...
+            Loading submissions using Factory pattern...
           </Typography>
         </Box>
+      </Container>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="info" sx={{ mb: 4 }}>
+          Please log in to view your submissions.
+        </Alert>
       </Container>
     );
   }
 
   if (error) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 8, mb: 4 }}>
-        <Alert severity="error" sx={{ mb: 3 }}>
+      <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+        <Alert severity="error" sx={{ mb: 4 }}>
           {error}
         </Alert>
-        <Button variant="contained" onClick={() => navigate('/hackathons')}>
-          Back to Hackathons
+        <Button variant="contained" onClick={fetchData}>
+          Retry
         </Button>
       </Container>
     );
   }
 
+  // Use Factory pattern collections for filtering
+  const allSubmissions = submissionCollection?.toArray() || [];
+  const userSubmissions = submissionCollection?.getUserSubmissions(user.id).toArray() || [];
+  const judgeableSubmissions = submissionCollection?.getJudgeableSubmissions().toArray() || [];
+
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 6 }}>
+    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       {/* Header */}
-      <Box sx={{ textAlign: 'center', mb: 4 }}>
-        <SubmissionIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
+      <Box sx={{ mb: 4 }}>
         <Typography variant="h3" component="h1" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
-          {isJudge ? 'Primary Submissions to Judge' : 'My Submissions'}
+          <SubmissionIcon sx={{ fontSize: 'inherit', mr: 1, verticalAlign: 'text-bottom' }} />
+          Submissions
         </Typography>
+        
+        {/* Factory pattern metadata display */}
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', mb: 2 }}>
+          <Chip 
+            label={`Total: ${submissionCollection?.count || 0}`} 
+            color="primary" 
+            variant="outlined" 
+          />
+          {isJudge && (
+            <Chip 
+              label={`Judgeable: ${judgeableSubmissions.length}`} 
+              color="secondary" 
+              variant="outlined" 
+              icon={<JudgeIcon />}
+            />
+          )}
+          <Chip 
+            label={`Your Submissions: ${userSubmissions.length}`} 
+            color="success" 
+            variant="outlined" 
+          />
+        </Box>
+        
         <Typography variant="h6" color="textSecondary">
           {isJudge 
-            ? 'Review and score the primary submissions from teams' 
-            : 'Browse and manage your hackathon submissions'
+            ? `Viewing all submissions as a judge (${allSubmissions.length} total)`
+            : `Your submitted projects (${userSubmissions.length} submissions)`
           }
         </Typography>
       </Box>
 
-      {submissions.length === 0 ? (
-        <Box sx={{ textAlign: 'center', py: 8 }}>
+      {/* Submissions Grid */}
+      {allSubmissions.length === 0 ? (
+        <Card elevation={2} sx={{ p: 4, textAlign: 'center' }}>
+          <SubmissionIcon sx={{ fontSize: 80, color: 'text.secondary', mb: 2 }} />
           <Typography variant="h5" gutterBottom>
             No Submissions Found
           </Typography>
           <Typography variant="body1" color="textSecondary" sx={{ mb: 3 }}>
-            No projects have been submitted to hackathons yet. Submissions will appear here once participants submit their projects.
+            {isJudge 
+              ? "No submissions available for judging at the moment."
+              : "You haven't submitted any projects yet."
+            }
           </Typography>
-          <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
-            To submit a project, participants need to use the submission API endpoint after joining a hackathon.
-          </Typography>
-          <Button variant="contained" onClick={() => navigate('/hackathons')}>
-            View Hackathons
-          </Button>
-        </Box>
+          {!isJudge && (
+            <Button 
+              variant="contained" 
+              onClick={() => navigate('/hackathons')}
+              size="large"
+            >
+              Find Hackathons
+            </Button>
+          )}
+        </Card>
       ) : (
         <Grid container spacing={3}>
-          {submissions.map((submission) => (
+          {allSubmissions.map((submission) => (
             <Grid item xs={12} md={6} lg={4} key={submission.id}>
               <Card 
                 elevation={2} 
@@ -314,24 +342,32 @@ const SubmissionsListPage: React.FC = () => {
                     />
                   )}
 
-                  {/* Resource Indicators */}
-                  <Box sx={{ display: 'flex', gap: 1, mb: 1, flexWrap: 'wrap' }}>
-                    {submission.filePath && (
+                  {/* Factory pattern metadata indicators */}
+                  <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
+                    {submission.metadata?.hasFile && (
                       <Chip 
-                        icon={<FileIcon />}
-                        label="Files Available"
-                        size="small"
-                        color="secondary"
+                        icon={<FileIcon />} 
+                        label="File" 
+                        size="small" 
+                        color="info" 
                         variant="outlined"
                       />
                     )}
-                    {submission.projectUrl && (
+                    {submission.metadata?.hasUrl && (
                       <Chip 
-                        icon={<LinkIcon />}
-                        label="Project Link"
-                        size="small"
-                        color="info"
+                        icon={<LinkIcon />} 
+                        label="URL" 
+                        size="small" 
+                        color="success" 
                         variant="outlined"
+                      />
+                    )}
+                    {submission.isPrimary && (
+                      <Chip 
+                        label="Primary" 
+                        size="small" 
+                        color="warning" 
+                        variant="filled"
                       />
                     )}
                   </Box>
@@ -345,20 +381,30 @@ const SubmissionsListPage: React.FC = () => {
 
                 <CardActions sx={{ p: 2, pt: 0 }}>
                   <Button
-                    variant="outlined"
+                    size="small"
                     startIcon={<ViewIcon />}
                     onClick={() => handleViewSubmission(submission.id)}
-                    sx={{ mr: 1 }}
                   >
-                    View Details
+                    View
                   </Button>
                   
-                  {isUserJudgeForHackathon(submission.hackathonId || 0) && (
+                  {/* Factory pattern metadata usage for conditional rendering */}
+                  {submission.metadata?.canEdit && (
                     <Button
-                      variant="contained"
+                      size="small"
+                      color="primary"
+                      onClick={() => handleEditSubmission(submission.id)}
+                    >
+                      Edit
+                    </Button>
+                  )}
+                  
+                  {submission.metadata?.canJudge && (
+                    <Button
+                      size="small"
+                      color="secondary"
                       startIcon={<JudgeIcon />}
                       onClick={() => handleJudgeSubmission(submission.id)}
-                      color="primary"
                     >
                       Judge
                     </Button>

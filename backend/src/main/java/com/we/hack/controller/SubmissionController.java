@@ -75,6 +75,24 @@ public class SubmissionController {
         return submissionService.createFinalSubmission(builder, userId, hackathonId, file);
     }
 
+    @PostMapping(value = "/saveDraft", consumes = "multipart/form-data")
+    public Submission saveDraft(
+            @RequestParam("hackathonId") int hackathonId,
+            @RequestParam("userId") Long userId,
+            @RequestParam(value = "title", required = false) String title,
+            @RequestParam(value = "description", required = false) String description,
+            @RequestParam(value = "projectUrl", required = false) String projectUrl,
+            @RequestPart(value = "file", required = false) MultipartFile file
+    ) {
+
+        SubmissionBuilder builder = new ConcreteSubmissionBuilder()
+                .title(title)
+                .description(description)
+                .projectUrl(projectUrl)
+                .asDraft(true);
+        return submissionService.createFinalSubmission(builder, userId, hackathonId, file);
+    }
+
     @PutMapping("/editSubmission")
     public Submission editSubmission(
             @RequestBody EditSubmissionRequest request

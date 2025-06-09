@@ -133,7 +133,7 @@ public class HackathonServiceImpl implements HackathonService {
 
     @Override
     public List<Hackathon> getAllHackathons() {
-        return hackathonRepository.findAll();
+        return hackathonRepository.findAllOrderByIdDesc();
     }
 
     @Override

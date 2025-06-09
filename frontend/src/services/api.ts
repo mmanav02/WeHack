@@ -68,14 +68,26 @@ export const submissionAPI = {
                 'Content-Type': 'multipart/form-data',
             },
         }),
+    
+    // New draft submission API
+    saveDraft: (formData: FormData) => 
+        api.post('/submissions/saveDraft', formData, {
+            headers: {
+                'Content-Type': 'multipart/form-data',
+            },
+        }),
+    
     edit: (editData: any) => api.put('/submissions/editSubmission', editData),
     undoLastEdit: (undoData: any) => api.post('/submissions/undoLastEdit', undoData),
+    
+    // Legacy API - keeping for backward compatibility
     submit: (hackathonId: number, userId: number, submissionData: FormData) => 
         api.post(`/submissions/${hackathonId}/user/${userId}`, submissionData, {
             headers: {
                 'Content-Type': 'multipart/form-data',
             },
         }),
+    
     getByHackathon: (hackathonId: number) => api.get(`/submissions/hackathon/${hackathonId}`),
     getByUser: (userId: number) => api.get(`/submissions/user/${userId}`),
     getById: (submissionId: number) => api.get(`/submissions/${submissionId}`),
@@ -86,6 +98,9 @@ export const submissionAPI = {
         api.post(`/submissions/${submissionId}/setPrimary?userId=${userId}`),
     getPrimarySubmissions: (hackathonId: number) => 
         api.get(`/submissions/hackathon/${hackathonId}/primary`),
+    
+    // File info API
+    getFileInfo: (submissionId: number) => api.get(`/submissions/${submissionId}/file-info`),
 };
 
 // Comment APIs

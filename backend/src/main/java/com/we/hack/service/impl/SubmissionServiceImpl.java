@@ -13,6 +13,7 @@ import com.we.hack.repository.UserRepository;
 import com.we.hack.service.SubmissionService;
 import com.we.hack.service.adapter.MailServiceAdapter;
 import com.we.hack.service.builder.Submission.SubmissionBuilder;
+import com.we.hack.service.builder.Submission.ConcreteSubmissionBuilder;
 import com.we.hack.service.iterator.CollectionFactory;
 import com.we.hack.service.iterator.Iterator;
 import com.we.hack.service.decorator.EmailNotifier;
@@ -166,14 +167,17 @@ public class SubmissionServiceImpl implements SubmissionService {
             throw new RuntimeException("User is not a member of this team");
         }
 
-        Submission submissionNew = new Submission();
-        submissionNew.setTitle(title);
-        submissionNew.setDescription(description);
-        submissionNew.setProjectUrl(projectUrl);
-        submissionNew.setSubmitTime(Instant.now());
-        submissionNew.setHackathon(oldSubmission.getHackathon());
-        submissionNew.setUser(oldSubmission.getUser());
-        submissionNew.setTeam(oldSubmission.getTeam());
+        // Use Builder pattern for consistent construction and validation
+        SubmissionBuilder builder = new ConcreteSubmissionBuilder()
+                .title(title)
+                .description(description)
+                .projectUrl(projectUrl)
+                .setSubmitTime()
+                .setUser(oldSubmission.getUser())
+                .setHackathon(oldSubmission.getHackathon())
+                .team(team);
+
+        Submission submissionNew = builder.build();
 
         if (file != null && !file.isEmpty()) {
             try {
@@ -187,7 +191,13 @@ public class SubmissionServiceImpl implements SubmissionService {
             } catch (IOException e) {
                 throw new RuntimeException("Failed to upload file", e);
             }
+        } else {
+            // Preserve existing file path if no new file uploaded
+            submissionNew.setFilePath(oldSubmission.getFilePath());
         }
+
+        // Set the ID to update existing submission
+        submissionNew.setId(submissionId);
 
         submissionNew = submissionRepository.save(submissionNew);
         team.setSubmission(submissionNew);

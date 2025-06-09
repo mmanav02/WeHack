@@ -23,6 +23,8 @@ import {
 } from '@mui/icons-material';
 import { hackathonRegistrationAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { RoleFactory } from '../utils/RoleFactory';
+import type { Role, ApprovalStatus } from '../utils/RoleFactory';
 
 interface UserHackathon {
   id: number;
@@ -34,50 +36,64 @@ interface UserHackathon {
 
 const UserDashboard = () => {
   const { user } = useAuth();
-  
-  const [loading, setLoading] = useState(false);
   const [userHackathons, setUserHackathons] = useState<UserHackathon[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showLeaveDialog, setShowLeaveDialog] = useState(false);
-  const [selectedHackathon, setSelectedHackathon] = useState<UserHackathon | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState<number | null>(null);
   const [leaving, setLeaving] = useState(false);
 
-  // Mock data for demonstration - in real app, this would come from an API
   useEffect(() => {
-    // This would be replaced with actual API call to get user's hackathons
-    const mockUserHackathons: UserHackathon[] = [
-      {
-        id: 1,
-        name: "AI Innovation Challenge",
-        role: "PARTICIPANT",
-        status: "ACTIVE",
-        joinedAt: "2024-01-15"
-      },
-      {
-        id: 2,
-        name: "Web3 Hackathon",
-        role: "JUDGE",
-        status: "PENDING",
-        joinedAt: "2024-01-20"
-      }
-    ];
-    setUserHackathons(mockUserHackathons);
-  }, []);
+    if (user) {
+      fetchUserHackathons();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
 
-  const handleLeaveHackathon = async () => {
-    if (!selectedHackathon || !user) return;
+  const fetchUserHackathons = async () => {
+    try {
+      setLoading(true);
+      // Note: This is a placeholder as we don't have a direct API for user's hackathons
+      // In a real implementation, you'd call an API endpoint
+      setUserHackathons([
+        // Mock data for demonstration
+        {
+          id: 1,
+          name: "AI Innovation Challenge",
+          role: "PARTICIPANT",
+          status: "APPROVED",
+          joinedAt: new Date().toISOString()
+        },
+        {
+          id: 2,
+          name: "Web3 Builders Hackathon",
+          role: "JUDGE",
+          status: "PENDING",
+          joinedAt: new Date().toISOString()
+        }
+      ]);
+    } catch (err: any) {
+      console.error('Failed to fetch user hackathons:', err);
+      setError('Failed to load your hackathons');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLeaveHackathon = async (hackathonId: number) => {
+    if (!user) return;
 
     try {
       setLeaving(true);
-      await hackathonRegistrationAPI.leaveHackathon({
-        userId: user.id,
-        hackathonId: selectedHackathon.id
+      await hackathonRegistrationAPI.leaveHackathon({ 
+        userId: user.id, 
+        hackathonId 
       });
-
+      
       // Remove from local state
-      setUserHackathons(prev => prev.filter(h => h.id !== selectedHackathon.id));
-      setShowLeaveDialog(false);
-      setSelectedHackathon(null);
+      setUserHackathons(prev => prev.filter(h => h.id !== hackathonId));
+      setConfirmLeave(null);
+      
     } catch (err: any) {
       console.error('Failed to leave hackathon:', err);
       setError('Failed to leave hackathon. Please try again.');
@@ -86,40 +102,13 @@ const UserDashboard = () => {
     }
   };
 
-  const handleLeaveClick = (hackathon: UserHackathon) => {
-    setSelectedHackathon(hackathon);
-    setShowLeaveDialog(true);
+  // Factory pattern methods for consistent styling
+  const getRoleColor = (role: string): 'primary' | 'secondary' | 'success' | 'warning' | 'error' | 'info' => {
+    return RoleFactory.getRoleColor(role as Role);
   };
 
-  const handleCloseDialog = () => {
-    setShowLeaveDialog(false);
-    setSelectedHackathon(null);
-  };
-
-  const getRoleColor = (role: string) => {
-    switch (role) {
-      case 'PARTICIPANT':
-        return 'primary';
-      case 'JUDGE':
-        return 'secondary';
-      case 'ORGANIZER':
-        return 'success';
-      default:
-        return 'default';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ACTIVE':
-        return 'success';
-      case 'PENDING':
-        return 'warning';
-      case 'COMPLETED':
-        return 'default';
-      default:
-        return 'info';
-    }
+  const getStatusColor = (status: string): 'success' | 'warning' | 'error' | 'info' => {
+    return RoleFactory.getStatusColor(status as ApprovalStatus);
   };
 
   if (!user) {
@@ -128,6 +117,19 @@ const UserDashboard = () => {
         <CardContent sx={{ textAlign: 'center', py: 4 }}>
           <Typography variant="h6" color="textSecondary">
             Please log in to view your dashboard
+          </Typography>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent sx={{ textAlign: 'center', py: 4 }}>
+          <CircularProgress />
+          <Typography variant="h6" sx={{ mt: 2 }}>
+            Loading your hackathons...
           </Typography>
         </CardContent>
       </Card>
@@ -166,39 +168,46 @@ const UserDashboard = () => {
               >
                 <ListItemText
                   primary={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 'bold' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 'medium' }}>
                         {hackathon.name}
                       </Typography>
+                    </Box>
+                  }
+                  secondary={
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                      {/* Using Factory pattern for role colors */}
                       <Chip 
                         label={hackathon.role} 
                         size="small" 
                         color={getRoleColor(hackathon.role)}
                         variant="outlined"
                       />
+                      
+                      {/* Using Factory pattern for status colors */}
                       <Chip 
                         label={hackathon.status} 
                         size="small" 
                         color={getStatusColor(hackathon.status)}
+                        variant={hackathon.status === 'PENDING' ? 'outlined' : 'filled'}
                       />
+                      
+                      {hackathon.joinedAt && (
+                        <Typography variant="caption" color="textSecondary" sx={{ alignSelf: 'center' }}>
+                          Joined: {new Date(hackathon.joinedAt).toLocaleDateString()}
+                        </Typography>
+                      )}
                     </Box>
-                  }
-                  secondary={
-                    hackathon.joinedAt && (
-                      <Typography variant="caption" color="textSecondary">
-                        Joined: {new Date(hackathon.joinedAt).toLocaleDateString()}
-                      </Typography>
-                    )
                   }
                 />
                 <ListItemSecondaryAction>
                   <Button
+                    size="small"
                     variant="outlined"
                     color="error"
-                    size="small"
                     startIcon={<LeaveIcon />}
-                    onClick={() => handleLeaveClick(hackathon)}
-                    disabled={loading}
+                    onClick={() => setConfirmLeave(hackathon.id)}
+                    disabled={leaving}
                   >
                     Leave
                   </Button>
@@ -207,50 +216,43 @@ const UserDashboard = () => {
             ))}
           </List>
         )}
-
-        {/* Leave Confirmation Dialog */}
-        <Dialog 
-          open={showLeaveDialog} 
-          onClose={handleCloseDialog}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <WarningIcon color="warning" />
-            Confirm Leave Hackathon
-          </DialogTitle>
-          <DialogContent>
-            <Typography variant="body1" sx={{ mb: 2 }}>
-              Are you sure you want to leave <strong>{selectedHackathon?.name}</strong>?
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              This action cannot be undone. You will lose access to:
-            </Typography>
-            <Box component="ul" sx={{ mt: 1, pl: 2 }}>
-              <li>Team memberships and project data</li>
-              <li>Submission history</li>
-              <li>Access to hackathon resources</li>
-              {selectedHackathon?.role === 'JUDGE' && (
-                <li>Judging assignments and scoring access</li>
-              )}
-            </Box>
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseDialog}>
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleLeaveHackathon}
-              color="error"
-              variant="contained"
-              disabled={leaving}
-              startIcon={leaving ? <CircularProgress size={16} /> : <LeaveIcon />}
-            >
-              {leaving ? 'Leaving...' : 'Leave Hackathon'}
-            </Button>
-          </DialogActions>
-        </Dialog>
       </CardContent>
+
+      {/* Leave Confirmation Dialog */}
+      <Dialog
+        open={confirmLeave !== null}
+        onClose={() => setConfirmLeave(null)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <WarningIcon color="warning" />
+          Confirm Leave Hackathon
+        </DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to leave this hackathon? This action cannot be undone and you'll lose:
+          </Typography>
+          <Box component="ul" sx={{ mt: 2, pl: 2 }}>
+            <li>Your team membership (if any)</li>
+            <li>All submitted projects</li>
+            <li>Your participation history</li>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmLeave(null)}>
+            Cancel
+          </Button>
+          <Button 
+            onClick={() => confirmLeave && handleLeaveHackathon(confirmLeave)}
+            color="error" 
+            variant="contained"
+            disabled={leaving}
+          >
+            {leaving ? 'Leaving...' : 'Leave Hackathon'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };

@@ -20,7 +20,8 @@ import {
   Stack,
   Chip,
   IconButton,
-  Tooltip
+  Tooltip,
+  LinearProgress
 } from '@mui/material';
 import {
   Save as SaveIcon,
@@ -38,6 +39,7 @@ import {
 import { submissionAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { hackathonAPI } from '../services/api';
+import { SubmissionBuilder, createSubmissionBuilder } from '../utils/SubmissionBuilder';
 
 interface Submission {
   id: number;
@@ -65,6 +67,9 @@ const EditSubmissionPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Builder pattern state
+  const [submissionBuilder, setSubmissionBuilder] = useState<SubmissionBuilder | null>(null);
+
   // Form state
   const [submission, setSubmission] = useState<Submission | null>(null);
   const [title, setTitle] = useState('');
@@ -87,9 +92,8 @@ const EditSubmissionPage: React.FC = () => {
   const [hasUndoHistory, setHasUndoHistory] = useState(false);
   const [primaryVersionId, setPrimaryVersionId] = useState<number | null>(null);
 
-  // Validation state
-  const [titleError, setTitleError] = useState('');
-  const [descriptionError, setDescriptionError] = useState('');
+  // Validation state - using Builder pattern validation
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     if (submissionId) {
@@ -119,6 +123,16 @@ const EditSubmissionPage: React.FC = () => {
         setTitle(submission.title);
         setDescription(submission.description);
         setProjectUrl(submission.projectUrl);
+
+        // Initialize Builder with existing submission data
+        const builder = createSubmissionBuilder()
+          .forHackathon(submission.hackathonId)
+          .byUser(user?.id || 0)
+          .title(submission.title)
+          .description(submission.description)
+          .projectUrl(submission.projectUrl);
+        
+        setSubmissionBuilder(builder);
 
         // Check hackathon status to determine if editing is allowed
         try {
@@ -156,27 +170,21 @@ const EditSubmissionPage: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    let isValid = true;
-    setTitleError('');
-    setDescriptionError('');
-
-    if (!title.trim()) {
-      setTitleError('Title is required');
-      isValid = false;
-    } else if (title.length < 3) {
-      setTitleError('Title must be at least 3 characters');
-      isValid = false;
+    if (!submissionBuilder) return false;
+    
+    // Update builder with current form values
+    const updatedBuilder = submissionBuilder
+      .title(title)
+      .description(description)
+      .projectUrl(projectUrl);
+    
+    if (file) {
+      updatedBuilder.file(file);
     }
-
-    if (!description.trim()) {
-      setDescriptionError('Description is required');
-      isValid = false;
-    } else if (description.length < 10) {
-      setDescriptionError('Description must be at least 10 characters');
-      isValid = false;
-    }
-
-    return isValid;
+    
+    const validation = updatedBuilder.asFinalSubmission().validate();
+    setValidationErrors(validation.errors);
+    return validation.isValid;
   };
 
   const handleSave = async () => {
@@ -411,15 +419,59 @@ const EditSubmissionPage: React.FC = () => {
               📝 Edit Project Details
             </Typography>
 
+            {/* Progress and Status Bar */}
+            {submissionBuilder && (
+              <Card elevation={1} sx={{ mb: 3, bgcolor: 'grey.50' }}>
+                <CardContent sx={{ py: 2 }}>
+                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                      Completion: {submissionBuilder.title(title).description(description).projectUrl(projectUrl).getCompletionPercentage()}%
+                    </Typography>
+                    <Stack direction="row" spacing={1}>
+                      <Chip
+                        label={hackathonStatus || 'Loading...'}
+                        color={canEdit ? 'success' : 'error'}
+                        size="small"
+                      />
+                      {canEdit && (
+                        <Chip
+                          label="Editable"
+                          color="primary"
+                          size="small"
+                          variant="outlined"
+                        />
+                      )}
+                    </Stack>
+                  </Box>
+                  <LinearProgress 
+                    variant="determinate" 
+                    value={submissionBuilder.title(title).description(description).projectUrl(projectUrl).getCompletionPercentage()} 
+                    sx={{ borderRadius: 1, height: 6 }}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
             {/* Error/Success Messages */}
             {error && (
-              <Alert severity="error" sx={{ mb: 3 }}>
+              <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
                 {error}
               </Alert>
             )}
             {success && (
-              <Alert severity="success" sx={{ mb: 3 }}>
+              <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess('')}>
                 {success}
+              </Alert>
+            )}
+
+            {validationErrors.length > 0 && (
+              <Alert severity="warning" sx={{ mb: 3 }}>
+                <Typography variant="subtitle2" sx={{ mb: 1 }}>Please fix the following issues:</Typography>
+                <ul style={{ margin: 0, paddingLeft: 20 }}>
+                  {validationErrors.map((error, index) => (
+                    <li key={index}>{error}</li>
+                  ))}
+                </ul>
               </Alert>
             )}
 
@@ -431,8 +483,8 @@ const EditSubmissionPage: React.FC = () => {
                 label="Project Title"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                error={!!titleError}
-                helperText={titleError || "Give your project a descriptive title"}
+                error={!!validationErrors.find(e => e === 'Title is required') || !!validationErrors.find(e => e === 'Title must be at least 3 characters')}
+                helperText={validationErrors.find(e => e === 'Title is required') || validationErrors.find(e => e === 'Title must be at least 3 characters') || "Give your project a descriptive title"}
                 disabled={saving || !canEdit}
               />
 
@@ -445,8 +497,8 @@ const EditSubmissionPage: React.FC = () => {
                 label="Project Description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                error={!!descriptionError}
-                helperText={descriptionError || "Describe your project's purpose, features, and technology"}
+                error={!!validationErrors.find(e => e === 'Description is required') || !!validationErrors.find(e => e === 'Description must be at least 10 characters')}
+                helperText={validationErrors.find(e => e === 'Description is required') || validationErrors.find(e => e === 'Description must be at least 10 characters') || "Describe your project's purpose, features, and technology"}
                 disabled={saving || !canEdit}
               />
 
@@ -541,7 +593,7 @@ const EditSubmissionPage: React.FC = () => {
               <Divider sx={{ mb: 2 }} />
               
               <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                Your changes are automatically saved as versions. You can undo changes to restore previous versions.
+                Save your changes to create new versions. You can undo changes to restore previous versions.
               </Typography>
 
               <Box sx={{ mb: 2 }}>

@@ -63,9 +63,30 @@ public final class HackathonMapper {
                     .format(formatter);
         }
         
+        // Generate meaningful title if missing
+        String title = hackathon.getTitle();
+        if (title == null || title.trim().isEmpty()) {
+            // Create meaningful titles based on status and ID
+            String status = hackathon.getStatus() != null ? hackathon.getStatus() : "Draft";
+            switch (status) {
+                case "Published":
+                    title = "Innovation Challenge " + hackathon.getId();
+                    break;
+                case "Judging":
+                    title = "Tech Hackathon " + hackathon.getId() + " (Judging)";
+                    break;
+                case "Completed":
+                    title = "Completed Hackathon " + hackathon.getId();
+                    break;
+                default: // Draft
+                    title = "Draft Hackathon " + hackathon.getId();
+                    break;
+            }
+        }
+        
         return HackathonDto.builder()
                 .id(hackathon.getId())
-                .title(hackathon.getTitle())
+                .title(title)
                 .description(hackathon.getDescription())
                 .date(formattedDate)
                 .status(hackathon.getStatus())

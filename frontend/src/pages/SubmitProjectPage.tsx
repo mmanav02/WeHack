@@ -16,24 +16,36 @@ import {
   FormControl,
   InputLabel,
   Input,
-  FormHelperText
+  FormHelperText,
+  Chip,
+  Stack
 } from '@mui/material';
 import {
   Upload as UploadIcon,
   Send as SendIcon,
   Description as ProjectIcon,
   Link as LinkIcon,
-  AttachFile as FileIcon
+  AttachFile as FileIcon,
+  Save as SaveIcon
 } from '@mui/icons-material';
 import { useAuth } from '../contexts/AuthContext';
 import { submissionAPI } from '../services/api';
+import { SubmissionBuilder, createSubmissionBuilder } from '../utils/SubmissionBuilder';
 
 const SubmitProjectPage: React.FC = () => {
   const { hackathonId } = useParams<{ hackathonId: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Builder pattern state
+  const [submissionBuilder, setSubmissionBuilder] = useState<SubmissionBuilder>(() => 
+    createSubmissionBuilder()
+      .forHackathon(parseInt(hackathonId!))
+      .byUser(user?.id || 0)
+  );
+
   const [loading, setLoading] = useState(false);
+  const [draftSaving, setDraftSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
 
@@ -44,76 +56,67 @@ const SubmitProjectPage: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
 
   // Form validation states
-  const [titleError, setTitleError] = useState('');
-  const [descriptionError, setDescriptionError] = useState('');
-  const [projectUrlError, setProjectUrlError] = useState('');
-  const [fileError, setFileError] = useState('');
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   useEffect(() => {
     if (!user) {
       navigate('/login', { state: { returnTo: `/hackathons/${hackathonId}/submit-project` } });
+    } else if (hackathonId) {
+      // Update builder with correct user ID
+      setSubmissionBuilder(prev => prev.byUser(user.id));
     }
   }, [user, hackathonId, navigate]);
 
+  // Update builder when form fields change
+  useEffect(() => {
+    setSubmissionBuilder(prev => prev
+      .title(title)
+      .description(description)
+      .projectUrl(projectUrl)
+    );
+    
+    if (file) {
+      setSubmissionBuilder(prev => prev.file(file));
+    }
+  }, [title, description, projectUrl, file]);
+
   const validateForm = () => {
-    let isValid = true;
-
-    // Reset errors
-    setTitleError('');
-    setDescriptionError('');
-    setProjectUrlError('');
-    setFileError('');
-
-    // Title validation
-    if (!title.trim()) {
-      setTitleError('Project title is required');
-      isValid = false;
-    } else if (title.trim().length < 3) {
-      setTitleError('Title must be at least 3 characters long');
-      isValid = false;
-    }
-
-    // Description validation
-    if (!description.trim()) {
-      setDescriptionError('Project description is required');
-      isValid = false;
-    } else if (description.trim().length < 10) {
-      setDescriptionError('Description must be at least 10 characters long');
-      isValid = false;
-    }
-
-    // Project URL validation (optional but if provided, should be valid)
-    if (projectUrl.trim() && !isValidUrl(projectUrl.trim())) {
-      setProjectUrlError('Please enter a valid URL (e.g., https://github.com/username/project)');
-      isValid = false;
-    }
-
-    // File validation
-    if (!file) {
-      setFileError('Please upload a project file');
-      isValid = false;
-    } else if (file.size > 50 * 1024 * 1024) { // 50MB limit
-      setFileError('File size must be less than 50MB');
-      isValid = false;
-    }
-
-    return isValid;
-  };
-
-  const isValidUrl = (string: string) => {
-    try {
-      const url = new URL(string);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch {
-      return false;
-    }
+    const validation = submissionBuilder.asFinalSubmission().validate();
+    setValidationErrors(validation.errors);
+    return validation.isValid;
   };
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
-      if (fileError) setFileError('');
+      setValidationErrors([]); // Clear validation errors when file is selected
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    if (!user || !hackathonId || !submissionBuilder.hasMinimumData()) {
+      setError('Please add some content before saving draft');
+      return;
+    }
+
+    try {
+      setDraftSaving(true);
+      setError(''); // Clear any previous errors
+      
+      const draftBuilder = submissionBuilder.clone().asDraft();
+      const formData = draftBuilder.buildDraft();
+      
+      console.log('💾 Saving draft submission...');
+      await submissionAPI.saveDraft(formData);
+      
+      console.log('✅ Draft saved successfully');
+      
+    } catch (err: any) {
+      console.error('⚠️ Draft save failed:', err);
+      setError('Failed to save draft. Please try again.');
+    } finally {
+      setDraftSaving(false);
     }
   };
 
@@ -134,24 +137,13 @@ const SubmitProjectPage: React.FC = () => {
     setError('');
 
     try {
-      // Create FormData exactly matching backend API
-      const formData = new FormData();
-      formData.append('hackathonId', hackathonId);
-      formData.append('userId', user.id.toString());
-      formData.append('title', title.trim());
-      formData.append('description', description.trim());
-      formData.append('projectUrl', projectUrl.trim());
-      formData.append('file', file!);
+      console.log('🚀 Submitting final project...');
+      
+      const finalBuilder = submissionBuilder.asFinalSubmission();
+      const formData = finalBuilder.build();
+      
+      console.log('📊 Submission completion:', finalBuilder.getCompletionPercentage() + '%');
 
-      console.log('🚀 Submitting project with data:');
-      console.log('- hackathonId:', hackathonId);
-      console.log('- userId:', user.id);
-      console.log('- title:', title.trim());
-      console.log('- description:', description.trim());
-      console.log('- projectUrl:', projectUrl.trim());
-      console.log('- file:', file?.name);
-
-      // Call backend API endpoint exactly as designed
       const response = await submissionAPI.submitProject(formData);
       console.log('✅ Project submitted successfully:', response.data);
 
@@ -165,7 +157,6 @@ const SubmitProjectPage: React.FC = () => {
     } catch (err: any) {
       console.error('❌ Project submission failed:', err);
       
-      // Handle specific error cases
       const errorMessage = typeof err.response?.data === 'string' ? err.response.data : '';
       
       if (errorMessage.includes('60 seconds')) {
@@ -255,6 +246,17 @@ const SubmitProjectPage: React.FC = () => {
         </Alert>
       )}
 
+      {validationErrors.length > 0 && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          <Typography variant="subtitle2" sx={{ mb: 1 }}>Please fix the following issues:</Typography>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {validationErrors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </Alert>
+      )}
+
       <Card elevation={2}>
         <CardContent sx={{ p: 4 }}>
           <Box component="form" onSubmit={handleSubmit} noValidate>
@@ -267,8 +269,11 @@ const SubmitProjectPage: React.FC = () => {
                   label="Project Title"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  error={!!titleError}
-                  helperText={titleError || "Give your project a catchy, descriptive name"}
+                  error={validationErrors.some(error => error.includes('Title'))}
+                  helperText={
+                    validationErrors.find(error => error.includes('Title')) || 
+                    "Give your project a catchy, descriptive name"
+                  }
                   placeholder="e.g., AI-Powered Health Assistant"
                   disabled={loading}
                 />
@@ -284,8 +289,11 @@ const SubmitProjectPage: React.FC = () => {
                   label="Project Description"
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  error={!!descriptionError}
-                  helperText={descriptionError || "Describe what your project does, the problem it solves, and technologies used"}
+                  error={validationErrors.some(error => error.includes('Description'))}
+                  helperText={
+                    validationErrors.find(error => error.includes('Description')) || 
+                    "Describe what your project does, the problem it solves, and technologies used"
+                  }
                   placeholder="Explain your project's purpose, features, technology stack, and impact..."
                   disabled={loading}
                 />
@@ -298,8 +306,11 @@ const SubmitProjectPage: React.FC = () => {
                   label="Project URL (GitHub, Demo, etc.)"
                   value={projectUrl}
                   onChange={(e) => setProjectUrl(e.target.value)}
-                  error={!!projectUrlError}
-                  helperText={projectUrlError || "Optional: Link to your GitHub repo, live demo, or project website"}
+                  error={validationErrors.some(error => error.includes('URL'))}
+                  helperText={
+                    validationErrors.find(error => error.includes('URL')) || 
+                    "Optional: Link to your GitHub repo, live demo, or project website"
+                  }
                   placeholder="https://github.com/username/project or https://myproject.com"
                   disabled={loading}
                   InputProps={{
@@ -310,7 +321,7 @@ const SubmitProjectPage: React.FC = () => {
 
               {/* File Upload */}
               <Grid item xs={12}>
-                <FormControl fullWidth error={!!fileError}>
+                <FormControl fullWidth error={validationErrors.some(error => error.includes('File'))}>
                   <InputLabel shrink htmlFor="file-upload">
                     Project File Upload *
                   </InputLabel>
@@ -343,19 +354,32 @@ const SubmitProjectPage: React.FC = () => {
                     )}
                   </Box>
                   <FormHelperText>
-                    {fileError || "Upload your project files (source code, documentation, etc.) - Max 50MB"}
+                    {validationErrors.find(error => error.includes('File')) || 
+                     "Upload your project files (source code, documentation, etc.) - Max 50MB"}
                   </FormHelperText>
                 </FormControl>
               </Grid>
 
-              {/* Submit Button */}
+              {/* Action Buttons */}
               <Grid item xs={12}>
-                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                <Stack direction="row" spacing={2} justifyContent="center" sx={{ mt: 2 }}>
+                  {/* Save Draft Button */}
+                  <Button
+                    variant="outlined"
+                    startIcon={<SaveIcon />}
+                    onClick={handleSaveDraft}
+                    disabled={loading || draftSaving || !submissionBuilder.hasMinimumData()}
+                    sx={{ px: 3 }}
+                  >
+                    {draftSaving ? 'Saving...' : 'Save Draft'}
+                  </Button>
+
+                  {/* Submit Final Button */}
                   <Button
                     type="submit"
                     variant="contained"
                     size="large"
-                    disabled={loading}
+                    disabled={loading || !validateForm()}
                     startIcon={loading ? <CircularProgress size={20} /> : <SendIcon />}
                     sx={{
                       px: 6,
@@ -370,32 +394,21 @@ const SubmitProjectPage: React.FC = () => {
                         boxShadow: '0 8px 25px rgba(25, 118, 210, 0.3)',
                       },
                       '&:disabled': {
-                        background: 'grey.300',
+                        background: 'grey.400',
                         transform: 'none',
+                        boxShadow: 'none',
                       }
                     }}
                   >
-                    {loading ? 'Submitting Project...' : 'Submit Project'}
+                    {loading ? 'Submitting...' : 'Submit Project'}
                   </Button>
-                </Box>
+                </Stack>
+
+                <Typography variant="caption" color="textSecondary" sx={{ display: 'block', textAlign: 'center', mt: 1 }}>
+                  Make sure all required fields are filled before submitting
+                </Typography>
               </Grid>
             </Grid>
-          </Box>
-
-          <Box sx={{ mt: 4, p: 3, bgcolor: 'grey.50', borderRadius: 2 }}>
-            <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
-              📋 Submission Guidelines
-            </Typography>
-            <Typography variant="body2" color="textSecondary" component="div">
-              <Box component="ul" sx={{ pl: 2, m: 0 }}>
-                <li>Make sure your project title is descriptive and unique</li>
-                <li>Include technical details, challenges faced, and solutions in description</li>
-                <li>Provide GitHub repo or demo links if available</li>
-                <li>Upload source code, documentation, or project demos</li>
-                <li>Supported file formats: .zip, .rar, .tar.gz, .pdf, .doc, .docx, .txt, .md</li>
-                <li>Maximum file size: 50MB</li>
-              </Box>
-            </Typography>
           </Box>
         </CardContent>
       </Card>
