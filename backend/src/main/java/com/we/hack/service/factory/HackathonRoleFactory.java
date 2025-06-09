@@ -1,10 +1,12 @@
 package com.we.hack.service.factory;
 
 import com.we.hack.model.*;
+import org.springframework.stereotype.Service;
 
+@Service
 public class HackathonRoleFactory {
 
-    public static HackathonRole create(User user, Hackathon hackathon, Role role) {
+    public HackathonRole create(User user, Hackathon hackathon, Role role) {
         HackathonRole hackathonRole = new HackathonRole();
         hackathonRole.setUser(user);
         hackathonRole.setHackathon(hackathon);

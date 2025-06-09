@@ -75,6 +75,9 @@ public class HackathonServiceImpl implements HackathonService {
     @Autowired
     private UnifiedNotificationService unifiedNotificationService;
 
+    @Autowired
+    private HackathonRoleFactory hackathonRoleFactory;
+
     @Override
     public Hackathon createHackathon(String title, String description, Instant startDate, Instant endDate, User organizer, ScoringMethod scoringMethod, String smtpPassword, MailModes mailMode, boolean slackEnabled) {
         logger.INFO("HackathonService.createHackathon() - Started creating hackathon with title: " + title);
@@ -372,7 +375,7 @@ public class HackathonServiceImpl implements HackathonService {
                     });
 
             logger.DEBUG("Creating hackathon role using factory pattern");
-            HackathonRole hackathonRole = HackathonRoleFactory.create(user, hackathon, role);
+            HackathonRole hackathonRole = hackathonRoleFactory.create(user, hackathon, role);
 
             HackathonRole savedRole = hackathonRoleRepository.save(hackathonRole);
             logger.INFO("User " + user.getEmail() + " successfully joined hackathon '" + hackathon.getTitle() + "' as " + role + " with status: " + savedRole.getStatus());
