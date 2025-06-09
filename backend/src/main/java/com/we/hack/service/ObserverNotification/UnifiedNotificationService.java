@@ -1,6 +1,9 @@
 package com.we.hack.service.ObserverNotification;
 
+import com.we.hack.model.ApprovalStatus;
 import com.we.hack.model.Hackathon;
+import com.we.hack.model.HackathonRole;
+import com.we.hack.model.Role;
 import com.we.hack.model.User;
 import com.we.hack.service.adapter.MailServiceAdapter;
 import com.we.hack.service.decorator.EmailNotifier;
@@ -15,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Service
 public class UnifiedNotificationService implements NotificationService {
@@ -35,46 +39,46 @@ public class UnifiedNotificationService implements NotificationService {
     @Autowired
     private ApplicationContext applicationContext;
 
-    private final Map<Integer, List<ObserverEntry>> observerRegistry = new ConcurrentHashMap<>();
-    
-    /**
-     * Inner class to store observer details
-     */
-    private static class ObserverEntry {
-        final String email;
-        final User organizer;
-        
-        ObserverEntry(String email, User organizer) {
-            this.email = email;
-            this.organizer = organizer;
-        }
-    }
+    // Observer registry: hackathonId -> List of HackathonRole (approved observers)
+    private final Map<Integer, List<HackathonRole>> observerRegistry = new ConcurrentHashMap<>();
     
     /**
      * Enhanced Observer that uses Decorator Pattern for notifications
      * This replaces the old JudgeNotifier class from the observer package with better functionality
      */
     private class DecoratorEnhancedObserver implements HackathonObserver {
-        private final String email;
-        private final User organizer;
+        private final HackathonRole hackathonRole;
         private final Hackathon hackathon;
         
-        public DecoratorEnhancedObserver(String email, User organizer, Hackathon hackathon) {
-            this.email = email;
-            this.organizer = organizer;
+        public DecoratorEnhancedObserver(HackathonRole hackathonRole, Hackathon hackathon) {
+            this.hackathonRole = hackathonRole;
             this.hackathon = hackathon;
             if (logger != null) {
-                logger.DEBUG("Created DecoratorEnhancedObserver for email: " + email + ", hackathon: " + hackathon.getTitle());
+                logger.DEBUG("Created DecoratorEnhancedObserver for role: " + hackathonRole.getRole() + 
+                           ", user: " + hackathonRole.getUser().getEmail() + 
+                           ", hackathon: " + hackathon.getTitle());
             }
         }
         
         @Override
         public void update(String message) {
             if (logger != null) {
-                logger.DEBUG("DecoratorEnhancedObserver.update() - Sending notification to: " + email);
+                logger.DEBUG("DecoratorEnhancedObserver.update() - Sending notification to: " + 
+                           hackathonRole.getUser().getEmail() + " (role: " + hackathonRole.getRole() + ")");
             }
+            
+            // Only send notifications to approved users
+            if (hackathonRole.getStatus() != ApprovalStatus.APPROVED) {
+                if (logger != null) {
+                    logger.WARN("Skipping notification for non-approved user: " + hackathonRole.getUser().getEmail() + 
+                               " (status: " + hackathonRole.getStatus() + ")");
+                }
+                return;
+            }
+            
             // Use decorator pattern to send notification through multiple channels
-            sendNotification(hackathon, organizer, email, "Hackathon Update", message);
+            sendNotification(hackathon, hackathon.getOrganizer(), hackathonRole.getUser().getEmail(), 
+                           "Hackathon Update", message);
         }
     }
 
@@ -147,38 +151,46 @@ public class UnifiedNotificationService implements NotificationService {
         }
         
         try {
-            List<ObserverEntry> observers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList());
+            List<HackathonRole> observers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList());
             
-            if (observers.isEmpty()) {
+            // Filter only approved observers
+            List<HackathonRole> approvedObservers = observers.stream()
+                    .filter(role -> role.getStatus() == ApprovalStatus.APPROVED)
+                    .collect(Collectors.toList());
+            
+            if (approvedObservers.isEmpty()) {
                 if (logger != null) {
-                    logger.WARN("No observers registered for hackathon " + hackathonId + " - skipping broadcast");
+                    logger.WARN("No approved observers registered for hackathon " + hackathonId + " - skipping broadcast");
                 }
                 return;
             }
             
             if (logger != null) {
-                logger.INFO("Broadcasting to " + observers.size() + " observers for hackathon: " + hackathon.getTitle() + " using MailMode: " + hackathon.getMailMode());
+                logger.INFO("Broadcasting to " + approvedObservers.size() + " approved observers for hackathon: " + 
+                           hackathon.getTitle() + " using MailMode: " + hackathon.getMailMode() + 
+                           " (total registered: " + observers.size() + ")");
             }
 
             int successCount = 0;
-            for (ObserverEntry entry : observers) {
+            for (HackathonRole role : approvedObservers) {
                 try {
                     if (logger != null) {
-                        logger.DEBUG("Creating DecoratorEnhancedObserver for: " + entry.email);
+                        logger.DEBUG("Creating DecoratorEnhancedObserver for: " + role.getUser().getEmail() + 
+                                   " (role: " + role.getRole() + ")");
                     }
-                    DecoratorEnhancedObserver observer = new DecoratorEnhancedObserver(
-                        entry.email, entry.organizer, hackathon);
+                    DecoratorEnhancedObserver observer = new DecoratorEnhancedObserver(role, hackathon);
                     observer.update(content);
                     successCount++;
                 } catch (Exception e) {
                     if (logger != null) {
-                        logger.ERROR("Failed to notify observer: " + entry.email + ", error: " + e.getMessage());
+                        logger.ERROR("Failed to notify observer: " + role.getUser().getEmail() + ", error: " + e.getMessage());
                     }
                 }
             }
             
             if (logger != null) {
-                logger.INFO("Broadcast complete for hackathon " + hackathonId + " - " + successCount + "/" + observers.size() + " notifications sent successfully using MailMode: " + hackathon.getMailMode());
+                logger.INFO("Broadcast complete for hackathon " + hackathonId + " - " + successCount + "/" + 
+                           approvedObservers.size() + " notifications sent successfully using MailMode: " + hackathon.getMailMode());
             }
             
         } catch (Exception e) {
@@ -190,39 +202,62 @@ public class UnifiedNotificationService implements NotificationService {
         }
     }
 
-    @Override
-    public void registerObserver(int hackathonId, String observerEmail, User organizer) {
+    /**
+     * Register a HackathonRole as an observer for notifications
+     * This replaces the old registerObserver method to use proper domain objects
+     */
+    public void registerObserver(HackathonRole hackathonRole) {
         if (logger != null) {
-            logger.INFO("UnifiedNotificationService.registerObserver() - Registering observer: " + observerEmail + " for hackathon: " + hackathonId);
-            logger.DEBUG("Organizer: " + organizer.getEmail());
+            logger.INFO("UnifiedNotificationService.registerObserver() - Registering observer: " + 
+                       hackathonRole.getUser().getEmail() + " (role: " + hackathonRole.getRole() + 
+                       ") for hackathon: " + hackathonRole.getHackathon().getId());
+            logger.DEBUG("Approval status: " + hackathonRole.getStatus());
         }
         
         try {
-            List<ObserverEntry> existingObservers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList());
+            int hackathonId = Math.toIntExact(hackathonRole.getHackathon().getId());
+            
+            // Check if observer is already registered
+            List<HackathonRole> existingObservers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList());
             boolean alreadyRegistered = existingObservers.stream()
-                    .anyMatch(entry -> entry.email.equals(observerEmail));
+                    .anyMatch(role -> Objects.equals(role.getUser().getId(), hackathonRole.getUser().getId()) &&
+                                    role.getRole() == hackathonRole.getRole());
             
             if (alreadyRegistered) {
                 if (logger != null) {
-                    logger.WARN("Observer " + observerEmail + " is already registered for hackathon " + hackathonId);
+                    logger.WARN("Observer " + hackathonRole.getUser().getEmail() + " with role " + 
+                               hackathonRole.getRole() + " is already registered for hackathon " + hackathonId);
                 }
                 return;
             }
             
-            observerRegistry.computeIfAbsent(hackathonId, k -> new ArrayList<>())
-                           .add(new ObserverEntry(observerEmail, organizer));
+            observerRegistry.computeIfAbsent(hackathonId, k -> new ArrayList<>()).add(hackathonRole);
             
             int totalObservers = observerRegistry.get(hackathonId).size();
             if (logger != null) {
-                logger.INFO("Observer " + observerEmail + " registered successfully for hackathon " + hackathonId + " (total: " + totalObservers + ")");
+                logger.INFO("Observer " + hackathonRole.getUser().getEmail() + " (" + hackathonRole.getRole() + 
+                           ") registered successfully for hackathon " + hackathonId + " (total: " + totalObservers + ")");
             }
             
         } catch (Exception e) {
             if (logger != null) {
-                logger.ERROR("Failed to register observer - email: " + observerEmail + ", hackathonId: " + hackathonId + ", error: " + e.getMessage());
+                logger.ERROR("Failed to register observer - user: " + hackathonRole.getUser().getEmail() + 
+                           ", hackathon: " + hackathonRole.getHackathon().getId() + ", error: " + e.getMessage());
             }
             throw e;
         }
+    }
+
+    /**
+     * Legacy method for backward compatibility
+     */
+    @Override
+    public void registerObserver(int hackathonId, String observerEmail, User organizer) {
+        if (logger != null) {
+            logger.WARN("Using legacy registerObserver method. Consider using registerObserver(HackathonRole) instead.");
+        }
+        // This method is kept for backward compatibility but logs a warning
+        // In practice, observers should be registered using the HackathonRole method
     }
 
     @Override
@@ -234,11 +269,12 @@ public class UnifiedNotificationService implements NotificationService {
         try {
             List<String> observers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList())
                                   .stream()
-                                  .map(entry -> entry.email)
-                                  .toList();
+                                  .filter(role -> role.getStatus() == ApprovalStatus.APPROVED)
+                                  .map(role -> role.getUser().getEmail())
+                                  .collect(Collectors.toList());
             
             if (logger != null) {
-                logger.DEBUG("Found " + observers.size() + " observers for hackathon " + hackathonId);
+                logger.DEBUG("Found " + observers.size() + " approved observers for hackathon " + hackathonId);
             }
             return observers;
             
@@ -250,13 +286,45 @@ public class UnifiedNotificationService implements NotificationService {
         }
     }
 
+    /**
+     * Get observers by role for a hackathon
+     */
+    public List<HackathonRole> getObserversByRole(int hackathonId, Role role) {
+        if (logger != null) {
+            logger.DEBUG("UnifiedNotificationService.getObserversByRole() - Getting " + role + 
+                        " observers for hackathon: " + hackathonId);
+        }
+        
+        try {
+            List<HackathonRole> observers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList())
+                                  .stream()
+                                  .filter(hackathonRole -> hackathonRole.getRole() == role && 
+                                                          hackathonRole.getStatus() == ApprovalStatus.APPROVED)
+                                  .collect(Collectors.toList());
+            
+            if (logger != null) {
+                logger.DEBUG("Found " + observers.size() + " approved " + role + " observers for hackathon " + hackathonId);
+            }
+            return observers;
+            
+        } catch (Exception e) {
+            if (logger != null) {
+                logger.ERROR("Failed to get " + role + " observers for hackathon " + hackathonId + ": " + e.getMessage());
+            }
+            throw e;
+        }
+    }
+    
+    /**
+     * Clear observers for a hackathon (useful for cleanup)
+     */
     public void clearObservers(int hackathonId) {
         if (logger != null) {
             logger.INFO("UnifiedNotificationService.clearObservers() - Clearing observers for hackathon: " + hackathonId);
         }
         
         try {
-            List<ObserverEntry> removed = observerRegistry.remove(hackathonId);
+            List<HackathonRole> removed = observerRegistry.remove(hackathonId);
             int removedCount = removed != null ? removed.size() : 0;
             if (logger != null) {
                 logger.INFO("Cleared " + removedCount + " observers for hackathon " + hackathonId);
@@ -269,16 +337,23 @@ public class UnifiedNotificationService implements NotificationService {
             throw e;
         }
     }
-
+    
+    /**
+     * Get observer count for a hackathon
+     */
     public int getObserverCount(int hackathonId) {
         if (logger != null) {
             logger.DEBUG("UnifiedNotificationService.getObserverCount() - Getting observer count for hackathon: " + hackathonId);
         }
         
         try {
-            int count = observerRegistry.getOrDefault(hackathonId, Collections.emptyList()).size();
+            int count = (int) observerRegistry.getOrDefault(hackathonId, Collections.emptyList())
+                    .stream()
+                    .filter(role -> role.getStatus() == ApprovalStatus.APPROVED)
+                    .count();
+            
             if (logger != null) {
-                logger.DEBUG("Observer count for hackathon " + hackathonId + ": " + count);
+                logger.DEBUG("Approved observer count for hackathon " + hackathonId + ": " + count);
             }
             return count;
             
