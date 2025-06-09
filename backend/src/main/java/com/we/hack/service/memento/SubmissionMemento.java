@@ -19,4 +19,4 @@ public class SubmissionMemento {
     public String getProjectUrl() { return projectUrl; }
     public String getFilePath() { return filePath; }
     public Instant getSavedAt() { return savedAt; }
-}
+} 

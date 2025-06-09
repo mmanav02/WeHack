@@ -56,6 +56,7 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Autowired
     private CollectionFactory collectionFactory;
 
+    @Qualifier("nullMailServiceAdapter")
     @Autowired
     private MailServiceAdapter mailServiceAdapter;
 
@@ -66,9 +67,9 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Transactional
     public Submission createFinalSubmission(SubmissionBuilder builder,
                                             Long userId,
-                                            int  hackathonId,
-                                            MultipartFile file) {
-
+                                            int hackathonId,
+                                            MultipartFile file)
+            throws RuntimeException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -76,7 +77,8 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .orElseThrow(() -> new RuntimeException("Hackathon not found"));
 
         Team team = teamRepository.findFirstByUsers_Id(userId)
-                .orElseThrow(() -> new RuntimeException("User not in any team"));
+                .orElseThrow(() ->
+                        new IllegalArgumentException("User is not in any team"));
 
         Submission submission = builder
                 .team(team)
@@ -84,29 +86,6 @@ public class SubmissionServiceImpl implements SubmissionService {
                 .setUser(user)
                 .setHackathon(hackathon)
                 .build();
-
-         // assuming submission has hackathon reference
-        User organizer = hackathon.getOrganizer();       // make sure this relationship exists
-        User submittingUser = submission.getUser();
-
-        Set<String> recipientEmails = new HashSet<>();
-        recipientEmails.add(submittingUser.getEmail());
-        if (team != null && team.getUsers() != null) {
-            for (User member : team.getUsers()) {
-                if (member != null && member.getEmail() != null) {
-                    recipientEmails.add(member.getEmail()); // Set ensures no duplicates
-                }
-            }
-        }
-
-        // Email notifications for submission
-        notifyOrganizer(
-                submission.getHackathon(),
-                organizer,
-                new ArrayList<>(recipientEmails),
-                "New Submission for: " + submission.getHackathon().getTitle(),
-                "Team " + team.getName() + " just submitted their project!"
-        );
 
         if (file != null && !file.isEmpty()) {
             try {
@@ -278,24 +257,23 @@ public class SubmissionServiceImpl implements SubmissionService {
     @Override
     @Transactional
     public Submission setPrimarySubmission(Long submissionId, Long userId) {
-        // Find the submission
         Submission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new RuntimeException("Submission not found"));
         
-        // Verify user has permission (is member of the team)
-        Long teamId = submission.getTeam().getId();
-        if (!teamRepository.existsByIdAndUsers_Id(teamId, userId)) {
+        // Verify user is part of the team
+        Team team = submission.getTeam();
+        if (!teamRepository.existsByIdAndUsers_Id(team.getId(), userId)) {
             throw new RuntimeException("User is not a member of this team");
         }
         
-        // Verify hackathon is not in judging or completed state
-        String hackathonStatus = submission.getHackathon().getStatus();
-        if ("Judging".equals(hackathonStatus) || "Completed".equals(hackathonStatus)) {
-            throw new RuntimeException("Cannot change primary submission during " + hackathonStatus + " phase");
+        // Check hackathon status
+        Hackathon hackathon = submission.getHackathon();
+        if ("Judging".equals(hackathon.getStatus()) || "Completed".equals(hackathon.getStatus())) {
+            throw new RuntimeException("Cannot set primary submission during " + hackathon.getStatus().toLowerCase() + " phase");
         }
         
-        // Clear primary flag from all submissions of this team in this hackathon
-        submissionRepository.clearPrimaryForTeamInHackathon(teamId, submission.getHackathon().getId());
+        // Clear existing primary for this team
+        submissionRepository.clearPrimaryForTeamInHackathon(team.getId(), hackathon.getId());
         
         // Set this submission as primary
         submission.setPrimary(true);
@@ -306,4 +284,4 @@ public class SubmissionServiceImpl implements SubmissionService {
     public List<Submission> getPrimarySubmissionsByHackathon(int hackathonId) {
         return submissionRepository.findByHackathonIdAndIsPrimaryTrue(hackathonId);
     }
-}
+} 
