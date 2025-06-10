@@ -57,42 +57,50 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
   return (
     <Box sx={{ mb: 2 }}>
-      <Paper 
-        elevation={depth === 0 ? 2 : 1} 
+      <Box
         sx={{ 
           p: 2, 
           ml: depth * 3,
-          backgroundColor: depth === 0 ? 'background.paper' : 'grey.50',
-          border: depth > 0 ? '1px solid #e0e0e0' : 'none'
+          backgroundColor: '#424242',
+          borderRadius: 2,
+          color: '#ffffff'
         }}
       >
         {/* Comment Header */}
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-          <Avatar sx={{ width: 32, height: 32, mr: 1, bgcolor: 'primary.main' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Avatar sx={{ width: 36, height: 36, mr: 2, bgcolor: 'primary.main' }}>
             {comment.user.name ? getInitials(comment.user.name) : <PersonIcon />}
           </Avatar>
           <Box sx={{ flexGrow: 1 }}>
-            <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#ffffff' }}>
               {comment.user.name || comment.user.email}
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography variant="caption" color="#cccccc">
               {formatDate((comment as any).createdAt)}
             </Typography>
           </Box>
         </Box>
 
         {/* Comment Content */}
-        <Typography variant="body2" sx={{ mb: 2, pl: 5 }}>
+        <Typography variant="body2" sx={{ mb: 2, pl: 6, color: '#ffffff', lineHeight: 1.6 }}>
           {comment.content}
         </Typography>
 
         {/* Comment Actions */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, pl: 5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pl: 6 }}>
           <Button
             size="small"
             startIcon={<ReplyIcon />}
             onClick={() => setShowReplyForm(!showReplyForm)}
-            sx={{ textTransform: 'none' }}
+            sx={{ 
+              textTransform: 'none',
+              color: '#cccccc',
+              fontSize: '0.875rem',
+              '&:hover': {
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                color: 'primary.main'
+              }
+            }}
           >
             Reply
           </Button>
@@ -102,7 +110,15 @@ const CommentItem: React.FC<CommentItemProps> = ({
               size="small"
               startIcon={showReplies ? <ExpandLessIcon /> : <ExpandMoreIcon />}
               onClick={() => setShowReplies(!showReplies)}
-              sx={{ textTransform: 'none' }}
+              sx={{ 
+                textTransform: 'none',
+                color: '#cccccc',
+                fontSize: '0.875rem',
+                '&:hover': {
+                  backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                  color: 'primary.main'
+                }
+              }}
             >
               {showReplies ? 'Hide' : 'Show'} {comment.getReplies().length} 
               {comment.getReplies().length === 1 ? ' reply' : ' replies'}
@@ -112,7 +128,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
         {/* Reply Form */}
         <Collapse in={showReplyForm}>
-          <Box sx={{ mt: 2, pl: 5 }}>
+          <Box sx={{ mt: 3, pl: 6 }}>
             <CommentForm
               hackathonId={hackathonId}
               userId={currentUserId}
@@ -126,7 +142,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
 
         {/* Nested Replies - Composite Pattern: Comment contains other Comments */}
         <Collapse in={showReplies}>
-          <Box sx={{ mt: 2 }}>
+          <Box sx={{ mt: 3 }}>
             {comment.getReplies().map((reply) => (
               <CommentItem
                 key={reply.id}
@@ -139,7 +155,7 @@ const CommentItem: React.FC<CommentItemProps> = ({
             ))}
           </Box>
         </Collapse>
-      </Paper>
+      </Box>
     </Box>
   );
 };

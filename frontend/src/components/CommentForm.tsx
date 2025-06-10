@@ -68,16 +68,15 @@ const CommentForm: React.FC<CommentFormProps> = ({
   };
 
   return (
-    <Paper 
-      elevation={isReply ? 0 : 1} 
+    <Box
       sx={{ 
-        p: isReply ? 1 : 2, 
-        backgroundColor: isReply ? 'transparent' : 'background.paper',
-        border: isReply ? '1px solid #e0e0e0' : 'none'
+        p: isReply ? 2 : 3, 
+        backgroundColor: isReply ? '#424242' : 'background.paper',
+        borderRadius: 2
       }}
     >
       {!isReply && (
-        <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold' }}>
+        <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, color: 'text.primary' }}>
           Add Comment
         </Typography>
       )}
@@ -92,17 +91,44 @@ const CommentForm: React.FC<CommentFormProps> = ({
         <TextField
           fullWidth
           multiline
-          rows={isReply ? 2 : 3}
+          rows={isReply ? 3 : 4}
           placeholder={placeholder}
           value={content}
           onChange={(e) => setContent(e.target.value)}
           disabled={isSubmitting}
-          sx={{ mb: 2 }}
-          inputProps={{ maxLength: 1000 }}
+          sx={{ 
+            mb: 2,
+            '& .MuiOutlinedInput-root': {
+              backgroundColor: isReply ? '#333333' : 'background.paper',
+              color: isReply ? '#ffffff' : 'text.primary',
+              '& input': {
+                color: isReply ? '#ffffff' : 'text.primary'
+              },
+              '& textarea': {
+                color: isReply ? '#ffffff' : 'text.primary'
+              },
+              '& .MuiOutlinedInput-notchedOutline': {
+                borderColor: isReply ? '#555555' : undefined
+              },
+              '&:hover .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'primary.main'
+              },
+              '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                borderColor: 'primary.main'
+              }
+            },
+            '& .MuiInputLabel-root': {
+              color: isReply ? '#cccccc' : 'text.secondary'
+            }
+          }}
+          inputProps={{ 
+            maxLength: 1000,
+            style: { color: isReply ? '#ffffff' : undefined }
+          }}
         />
         
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="caption" color="text.secondary">
+          <Typography variant="caption" color={isReply ? '#cccccc' : 'text.secondary'}>
             {content.length}/1000 characters
           </Typography>
           
@@ -114,7 +140,16 @@ const CommentForm: React.FC<CommentFormProps> = ({
                 startIcon={<CancelIcon />}
                 onClick={handleCancel}
                 disabled={isSubmitting}
-                sx={{ textTransform: 'none' }}
+                sx={{ 
+                  textTransform: 'none',
+                  borderColor: '#e0e0e0',
+                  color: isReply ? '#cccccc' : 'text.secondary',
+                  '&:hover': {
+                    borderColor: 'error.main',
+                    color: 'error.main',
+                    backgroundColor: isReply ? 'rgba(255, 255, 255, 0.1)' : 'error.light'
+                  }
+                }}
               >
                 Cancel
               </Button>
@@ -126,14 +161,18 @@ const CommentForm: React.FC<CommentFormProps> = ({
               size="small"
               startIcon={<SendIcon />}
               disabled={isSubmitting || !content.trim()}
-              sx={{ textTransform: 'none' }}
+              sx={{ 
+                textTransform: 'none',
+                fontWeight: 500,
+                px: 3
+              }}
             >
               {isSubmitting ? 'Posting...' : (isReply ? 'Reply' : 'Post Comment')}
             </Button>
           </Box>
         </Box>
       </form>
-    </Paper>
+    </Box>
   );
 };
 
