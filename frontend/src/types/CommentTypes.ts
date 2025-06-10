@@ -53,22 +53,30 @@ export class CommentImpl implements Comment {
     this.user = data.user;
     this.hackathon = data.hackathon;
     this.parent = data.parent;
-    this.replies = data.replies || [];
+    // Initialize replies as empty array first
+    this.replies = [];
+    // Then process nested replies if they exist
+    if (Array.isArray(data.replies)) {
+      this.replies = data.replies.map((reply: any) => new CommentImpl(reply));
+    }
     this.createdAt = data.createdAt;
   }
 
   getReplies(): CommentComponent[] {
-    return this.replies;
+    return this.replies || [];
   }
 
   addReply(reply: CommentComponent): void {
     if (reply instanceof CommentImpl) {
       reply.parent = this;
+      if (!this.replies) {
+        this.replies = [];
+      }
       this.replies.push(reply);
     }
   }
 
   hasReplies(): boolean {
-    return this.replies.length > 0;
+    return Array.isArray(this.replies) && this.replies.length > 0;
   }
 } 
