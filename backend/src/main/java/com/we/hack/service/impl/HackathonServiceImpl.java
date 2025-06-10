@@ -481,9 +481,20 @@ public class HackathonServiceImpl implements HackathonService {
 
             if (status.equals(ApprovalStatus.APPROVED)) {
                 logger.INFO("Judge approved - registering for notifications and sending approval message");
+                System.out.println("Judge approved - registering for notifications");
+                
+                // Debug logging before registration
+                logger.DEBUG("About to register observer - hackathonId: " + hackathonId + 
+                           ", judgeEmail: " + judgeEmail + 
+                           ", organizer: " + organizer.getEmail());
                 
                 // Register judge as observer in unified notification service
                 unifiedNotificationService.registerObserver(Math.toIntExact(hackathonId), judgeEmail, organizer);
+                
+                // Debug logging after registration
+                logger.DEBUG("Observer registration completed - checking observer count");
+                int observerCount = unifiedNotificationService.getObserverCount(Math.toIntExact(hackathonId));
+                logger.DEBUG("Current observer count for hackathon " + hackathonId + ": " + observerCount);
                 
                 // Send immediate approval notification using unified service
                 String approvalMessage = "✅ Your judge application for hackathon \"" + hackathon.getTitle() + "\" has been approved! You will now receive updates about this hackathon.";

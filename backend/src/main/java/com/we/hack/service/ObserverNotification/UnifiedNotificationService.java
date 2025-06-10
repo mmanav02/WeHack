@@ -36,45 +36,36 @@ public class UnifiedNotificationService implements NotificationService {
     private ApplicationContext applicationContext;
 
     private final Map<Integer, List<ObserverEntry>> observerRegistry = new ConcurrentHashMap<>();
-    
-    /**
-     * Inner class to store observer details
-     */
-    private static class ObserverEntry {
-        final String email;
-        final User organizer;
-        
-        ObserverEntry(String email, User organizer) {
-            this.email = email;
-            this.organizer = organizer;
-        }
-    }
+
     
     /**
      * Enhanced Observer that uses Decorator Pattern for notifications
      * This replaces the old JudgeNotifier class from the observer package with better functionality
      */
     private class DecoratorEnhancedObserver implements HackathonObserver {
-        private final String email;
-        private final User organizer;
+        private final ObserverEntry observerEntry;
         private final Hackathon hackathon;
         
-        public DecoratorEnhancedObserver(String email, User organizer, Hackathon hackathon) {
-            this.email = email;
-            this.organizer = organizer;
+        public DecoratorEnhancedObserver(ObserverEntry observerEntry, Hackathon hackathon) {
+            this.observerEntry = observerEntry;
             this.hackathon = hackathon;
             if (logger != null) {
-                logger.DEBUG("Created DecoratorEnhancedObserver for email: " + email + ", hackathon: " + hackathon.getTitle());
+                logger.DEBUG("Created DecoratorEnhancedObserver for role: " + observerEntry.getRole() + 
+                           ", user: " + observerEntry.getEmail() + 
+                           ", hackathon: " + hackathon.getTitle());
             }
         }
         
         @Override
         public void update(String message) {
             if (logger != null) {
-                logger.DEBUG("DecoratorEnhancedObserver.update() - Sending notification to: " + email);
+                logger.DEBUG("DecoratorEnhancedObserver.update() - Sending notification to: " + 
+                           observerEntry.getEmail() + " (role: " + observerEntry.getRole() + ")");
             }
+            
             // Use decorator pattern to send notification through multiple channels
-            sendNotification(hackathon, organizer, email, "Hackathon Update", message);
+            sendNotification(hackathon, observerEntry.getOrganizer(), observerEntry.getEmail(), 
+                           "Hackathon Update", message);
         }
     }
 
@@ -157,28 +148,30 @@ public class UnifiedNotificationService implements NotificationService {
             }
             
             if (logger != null) {
-                logger.INFO("Broadcasting to " + observers.size() + " observers for hackathon: " + hackathon.getTitle() + " using MailMode: " + hackathon.getMailMode());
+                logger.INFO("Broadcasting to " + observers.size() + " observers for hackathon: " + 
+                           hackathon.getTitle() + " using MailMode: " + hackathon.getMailMode());
             }
 
             int successCount = 0;
             for (ObserverEntry entry : observers) {
                 try {
                     if (logger != null) {
-                        logger.DEBUG("Creating DecoratorEnhancedObserver for: " + entry.email);
+                        logger.DEBUG("Creating DecoratorEnhancedObserver for: " + entry.getEmail() + 
+                                   " (role: " + entry.getRole() + ")");
                     }
-                    DecoratorEnhancedObserver observer = new DecoratorEnhancedObserver(
-                        entry.email, entry.organizer, hackathon);
+                    DecoratorEnhancedObserver observer = new DecoratorEnhancedObserver(entry, hackathon);
                     observer.update(content);
                     successCount++;
                 } catch (Exception e) {
                     if (logger != null) {
-                        logger.ERROR("Failed to notify observer: " + entry.email + ", error: " + e.getMessage());
+                        logger.ERROR("Failed to notify observer: " + entry.getEmail() + ", error: " + e.getMessage());
                     }
                 }
             }
             
             if (logger != null) {
-                logger.INFO("Broadcast complete for hackathon " + hackathonId + " - " + successCount + "/" + observers.size() + " notifications sent successfully using MailMode: " + hackathon.getMailMode());
+                logger.INFO("Broadcast complete for hackathon " + hackathonId + " - " + successCount + "/" + 
+                           observers.size() + " notifications sent successfully using MailMode: " + hackathon.getMailMode());
             }
             
         } catch (Exception e) {
@@ -193,33 +186,88 @@ public class UnifiedNotificationService implements NotificationService {
     @Override
     public void registerObserver(int hackathonId, String observerEmail, User organizer) {
         if (logger != null) {
-            logger.INFO("UnifiedNotificationService.registerObserver() - Registering observer: " + observerEmail + " for hackathon: " + hackathonId);
+            logger.INFO("UnifiedNotificationService.registerObserver() - Registering observer: " + observerEmail + 
+                       " for hackathon: " + hackathonId);
             logger.DEBUG("Organizer: " + organizer.getEmail());
+            logger.DEBUG("Current state of observerRegistry: " + observerRegistry);
         }
         
         try {
-            List<ObserverEntry> existingObservers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList());
-            boolean alreadyRegistered = existingObservers.stream()
-                    .anyMatch(entry -> entry.email.equals(observerEmail));
+            // Create ObserverEntry and call the main registration method
+            ObserverEntry observerEntry = new ObserverEntry(observerEmail, organizer, "OBSERVER");
+            registerObserver(hackathonId, observerEntry);
+            
+        } catch (Exception e) {
+            if (logger != null) {
+                logger.ERROR("Failed to register observer - email: " + observerEmail + 
+                           ", hackathonId: " + hackathonId + ", error: " + e.getMessage());
+                logger.SEVERE("Stack trace: " + e.toString());
+            }
+            throw e;
+        }
+    }
+
+    /**
+     * Main registration method that takes an ObserverEntry directly
+     */
+    public void registerObserver(int hackathonId, ObserverEntry observerEntry) {
+        if (logger != null) {
+            logger.INFO("UnifiedNotificationService.registerObserver() - Registering observer entry for hackathon: " + hackathonId);
+            logger.DEBUG("Observer: " + observerEntry.getEmail() + ", role: " + observerEntry.getRole());
+            logger.DEBUG("Current state of observerRegistry: " + observerRegistry);
+        }
+        
+        try {
+            // Get or create the list for this hackathon
+            List<ObserverEntry> observers = observerRegistry.get(hackathonId);
+            if (observers == null) {
+                observers = new ArrayList<>();
+                observerRegistry.put(hackathonId, observers);
+                if (logger != null) {
+                    logger.DEBUG("Created new observer list for hackathon: " + hackathonId);
+                }
+            }
+            
+            // Check if observer is already registered
+            boolean alreadyRegistered = observers.stream()
+                    .anyMatch(entry -> entry.getEmail().equals(observerEntry.getEmail()));
             
             if (alreadyRegistered) {
                 if (logger != null) {
-                    logger.WARN("Observer " + observerEmail + " is already registered for hackathon " + hackathonId);
+                    logger.WARN("Observer " + observerEntry.getEmail() + " is already registered for hackathon " + hackathonId);
                 }
                 return;
             }
             
-            observerRegistry.computeIfAbsent(hackathonId, k -> new ArrayList<>())
-                           .add(new ObserverEntry(observerEmail, organizer));
-            
-            int totalObservers = observerRegistry.get(hackathonId).size();
+            // Debug logging before adding observer
             if (logger != null) {
-                logger.INFO("Observer " + observerEmail + " registered successfully for hackathon " + hackathonId + " (total: " + totalObservers + ")");
+                logger.DEBUG("Current observers for hackathon " + hackathonId + ": " + observers.size());
+                logger.DEBUG("Adding observer entry: " + observerEntry);
+            }
+            
+            // Add the observer entry
+            observers.add(observerEntry);
+            
+            // Ensure the list is stored in the map
+            observerRegistry.put(hackathonId, observers);
+            
+            // Debug logging after adding observer
+            if (logger != null) {
+                logger.DEBUG("Updated observers for hackathon " + hackathonId + ": " + observers.size());
+                logger.DEBUG("All observers in registry: " + observerRegistry);
+            }
+            
+            int totalObservers = observers.size();
+            if (logger != null) {
+                logger.INFO("Observer " + observerEntry.getEmail() + " registered successfully for hackathon " + 
+                           hackathonId + " (total: " + totalObservers + ")");
             }
             
         } catch (Exception e) {
             if (logger != null) {
-                logger.ERROR("Failed to register observer - email: " + observerEmail + ", hackathonId: " + hackathonId + ", error: " + e.getMessage());
+                logger.ERROR("Failed to register observer entry - email: " + observerEntry.getEmail() + 
+                           ", hackathonId: " + hackathonId + ", error: " + e.getMessage());
+                logger.SEVERE("Stack trace: " + e.toString());
             }
             throw e;
         }
@@ -234,7 +282,7 @@ public class UnifiedNotificationService implements NotificationService {
         try {
             List<String> observers = observerRegistry.getOrDefault(hackathonId, Collections.emptyList())
                                   .stream()
-                                  .map(entry -> entry.email)
+                                  .map(ObserverEntry::getEmail)
                                   .toList();
             
             if (logger != null) {
@@ -249,7 +297,7 @@ public class UnifiedNotificationService implements NotificationService {
             throw e;
         }
     }
-
+    
     public void clearObservers(int hackathonId) {
         if (logger != null) {
             logger.INFO("UnifiedNotificationService.clearObservers() - Clearing observers for hackathon: " + hackathonId);
@@ -269,7 +317,7 @@ public class UnifiedNotificationService implements NotificationService {
             throw e;
         }
     }
-
+    
     public int getObserverCount(int hackathonId) {
         if (logger != null) {
             logger.DEBUG("UnifiedNotificationService.getObserverCount() - Getting observer count for hackathon: " + hackathonId);
@@ -277,6 +325,7 @@ public class UnifiedNotificationService implements NotificationService {
         
         try {
             int count = observerRegistry.getOrDefault(hackathonId, Collections.emptyList()).size();
+            
             if (logger != null) {
                 logger.DEBUG("Observer count for hackathon " + hackathonId + ": " + count);
             }
