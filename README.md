@@ -46,10 +46,27 @@ A comprehensive hackathon management platform that enables organizers to create,
 - **Maven** for dependency management
 
 ### **Design Patterns**
-- **Builder Pattern** for submission creation
-- **Composite Pattern** for hierarchical comments
-- **Observer Pattern** for real-time updates
-- **Decorator Pattern** for enhanced logging
+This project implements **15 different design patterns** to ensure maintainable, scalable, and well-structured code:
+
+#### **Backend Design Patterns (13 patterns)**
+- **Builder Pattern** - Submission creation with step-by-step construction
+- **Chain of Responsibility** - Validation chain for submissions (title, description, file size)
+- **Decorator Pattern** - Enhanced notification system with email and Slack decorators
+- **Factory Pattern** - Hackathon role creation and mail service adapter factory
+- **Observer Pattern** - Real-time hackathon notifications and updates
+- **State Pattern** - Hackathon lifecycle management (draft, published, judging, completed)
+- **Strategy Pattern** - Flexible scoring strategies (simple average, weighted average)
+- **Template Method** - Scoreboard generation for different phases
+- **Visitor Pattern** - Analytics collection and data processing
+- **Iterator Pattern** - Custom collections for hackathons, submissions, and teams
+- **Adapter Pattern** - Mail service integration (Mailgun, organizer SMTP)
+- **Bridge Pattern** - Score evaluation abstraction
+- **Proxy Pattern** - Submission service with access control and caching
+- **Memento Pattern** - Submission history and undo functionality
+
+#### **Frontend Design Patterns (2 patterns)**
+- **Factory Pattern** - UI component creation and role-based interfaces
+- **Builder Pattern** - Dynamic form building and submission construction
 
 ## 🚀 Quick Start
 
@@ -247,12 +264,6 @@ npm run build
 # Backend
 cd backend
 ./mvnw clean package
-```
-
-### Docker Deployment
-```bash
-# Build and run with Docker Compose
-docker-compose up --build
 ```
 
 ## 🤝 Contributing
